@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!-- Basic -->
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <!-- Mobile Metas -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+
+    <title>Login</title>
+
+    <!-- Bootstrap core CSS -->
+    <link rel="stylesheet" type="text/css" href="css/bootstrap.css" />
+
+    <!-- Fonts & Icons -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <link href="css/font-awesome.min.css" rel="stylesheet" />
+
+    <!-- Additional Plugins -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/jquery-nice-select/1.1.0/css/nice-select.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.3.0/css/datepicker.css"
+    />
+
+    <!-- Custom Styles -->
+    <link href="css/style.css" rel="stylesheet" />
+    <link href="css/responsive.css" rel="stylesheet" />
+  </head>
+
+  <body>
+    <!-- Login Section -->
+    <section class="book_section layout_padding">
+      <div class="container">
+        <div class="row">
+          <div class="col">
+            <form id="loginForm">
+              <h4>User <span>Login</span></h4>
+
+              <div class="form-row">
+                <div class="form-group col-lg-4">
+                  <label for="email">Email</label>
+                  <input
+                    type="email"
+                    class="form-control"
+                    id="email"
+                    placeholder="example@xyz.com"
+                    required
+                  />
+                </div>
+
+                <div class="form-group col-lg-4">
+                  <label for="password">Password</label>
+                  <input
+                    type="password"
+                    class="form-control"
+                    id="password"
+                    placeholder="Enter Password"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div class="btn-box">
+                <button type="submit" class="btn">Login</button>
+                <a href="http://127.0.0.1:5501/signup.html">Go to Sign up</a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- End Login Section -->
+
+    <!-- jQuery & Plugins -->
+    <script src="js/jquery-3.4.1.min.js"></script>
+    <script src="js/bootstrap.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-nice-select/1.1.0/js/jquery.nice-select.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.3.0/js/bootstrap-datepicker.js"></script>
+    <script src="js/custom.js"></script>
+
+    <!-- Login Form Script -->
+    <script>
+      document
+        .getElementById("loginForm")
+        .addEventListener("submit", function (event) {
+          event.preventDefault();
+
+          const email = document.getElementById("email").value;
+          const password = document.getElementById("password").value;
+
+          fetch("http://127.0.0.1:5000/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ email, password }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.message) {
+                alert("Login successful! Role: " + data.role);
+
+                // Store role in localStorage or sessionStorage for later use
+                localStorage.setItem("userRole", data.role);
+
+                // Redirect based on role
+                if (data.role === "Admin") {
+                  window.location.href = "admin_dashboard.html";
+                } else if (data.role === "Doctor") {
+                  window.location.href = "doctor_dashboard.html";
+                } else if (data.role === "Patient") {
+                  window.location.href = "appointment.html";
+                } else {
+                  window.location.href = "dashboard.html"; // Default redirect
+                }
+              } else {
+                alert("Invalid credentials.");
+              }
+            })
+            .catch((error) => console.error("Error:", error));
+        });
+    </script>
+  </body>
+</html>
