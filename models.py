@@ -24,6 +24,7 @@ class Doctor(db.Model):
     id = db.Column(db.Integer, db.ForeignKey("user.id"), primary_key=True)  # Foreign key from User
     name = db.Column(db.String(80), nullable=False)
     specialty = db.Column(db.String(100), nullable=False)
+    available_slots = db.Column(db.String(100), nullable=False) #, default="9:00AM-5:00PM"
     appointments = db.relationship("Appointment", backref="doctor", lazy=True)
 
 # Patient Model
@@ -40,14 +41,3 @@ class Appointment(db.Model):
     doctor_id = db.Column(db.Integer, db.ForeignKey("doctor.id"), nullable=False)
     date = db.Column(db.String(20), nullable=False)
     time_slot = db.Column(db.String(20), nullable=False)
-    symptoms = db.Column(db.String(255), nullable=True)
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "patient_id": self.patient_id,
-            "doctor_id": self.doctor_id,
-            "date": self.date,
-            "time_slot": self.time_slot,
-            "symptoms": self.symptoms,
-        }

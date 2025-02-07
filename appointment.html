@@ -1,143 +1,389 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Booking Appointment</title>
 
-<head>
-  <!-- Basic -->
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <!-- Mobile Metas -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-  <!-- Site Metas -->
-  <meta name="keywords" content="" />
-  <meta name="description" content="" />
-  <meta name="author" content="" />
+    <!-- Bootstrap & Custom CSS -->
+    <link rel="stylesheet" type="text/css" href="css/bootstrap.css" />
+    <link rel="stylesheet" href="css/font-awesome.min.css" />
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/responsive.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.3.0/css/datepicker.css"
+    />
 
-  <title>Appointment Booking</title>
+    <style>
+      /* General Section Styling */
+      .book_section {
+        padding: 60px 0;
+        background-color: #f8f9fa;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
 
+      /* Center the Heading */
+      .book_section h4 {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 26px;
+        font-weight: bold;
+        text-transform: uppercase;
+        color: #333;
+        position: relative;
+        margin-bottom: 40px;
+      }
 
-  <!-- bootstrap core css -->
-  <link rel="stylesheet" type="text/css" href="css/bootstrap.css" />
+      /* Underline Effect for Heading */
+      .book_section h4::before {
+        content: "";
+        position: absolute;
+        bottom: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 75px;
+        height: 3px;
+        background-color: #00c6a9;
+        border-radius: 2px;
+      }
 
-  <!-- fonts style -->
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+      /* Center the Form */
+      .container {
+        max-width: 600px; /* Restricts width for better alignment */
+        width: 100%;
+      }
 
-  <!--owl slider stylesheet -->
-  <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.carousel.min.css" />
+      /* Align Form Fields Properly */
+      .form-row {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+      }
 
-  <!-- font awesome style -->
-  <link href="css/font-awesome.min.css" rel="stylesheet" />
-  <!-- nice select -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-nice-select/1.1.0/css/nice-select.min.css" integrity="sha256-mLBIhmBvigTFWPSCtvdu6a76T+3Xyt+K571hupeFLg4=" crossorigin="anonymous" />
-  <!-- datepicker -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.3.0/css/datepicker.css">
-  <!-- Custom styles for this template -->
-  <link href="css/style.css" rel="stylesheet" />
-  <!-- responsive style -->
-  <link href="css/responsive.css" rel="stylesheet" />
+      /* Form Groups */
+      .form-group {
+        width: 100%;
+        max-width: 400px; /* Ensures all inputs are aligned */
+        text-align: left;
+      }
 
-  <style>
-    
+      /* Labels */
+      .form-group label {
+        font-weight: 600;
+        color: #444;
+        display: block;
+        margin-bottom: 5px;
+      }
 
-    .book_section h4::before {
-    content: "";
-    position: relative;
-    left: 116px;
-    bottom: -25px;
-    width: 75px;
-    height: 2px;
-    background-color: #00c6a9;
-    }
+      /* Input Fields */
+      .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        transition: border 0.3s ease-in-out;
+      }
 
-    .book_section h4 {
-      display: flex;
-    justify-content: center;
-    }
-    .form-row {
-      display: flex;
-      justify-content: center;
-    }
-  </style>
+      /* Input Focus Effect */
+      .form-control:focus {
+        border-color: #00c6a9;
+        outline: none;
+        box-shadow: 0 0 5px rgba(0, 198, 169, 0.5);
+      }
 
-</head>
+      /* Center the Button */
+      .btn-box {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+      }
 
-<body>
+      /* Button Styling */
+      .btn {
+        background-color: #00c6a9;
+        color: #fff;
+        padding: 12px 25px;
+        font-size: 16px;
+        font-weight: bold;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background 0.3s ease-in-out;
+      }
 
- 
+      /* Button Hover Effect */
+      .btn:hover {
+        background-color: #009c89;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Patient Welcome Message -->
+    <h2
+      id="welcomeMessage"
+      style="text-align: center; margin-top: 20px; color: #333"
+    ></h2>
 
-  <!-- book section -->
-
-  <section class="book_section layout_padding">
-    <div class="container">
-      <div class="row">
-        <div class="col">
-          <form>
-            <h4>
-                BOOK<span>&nbsp; APPOINTMENT</span>
-            </h4>
-            <div class="form-row ">
-              
-              <div class="form-group col-lg-4">
-                <label for="inputDoctorName">Doctor's Name</label>
-                <select name="" class="form-control wide" id="inputDoctorName">
-                  <option value="Normal distribution ">Smith </option>
-                  <option value="Normal distribution ">Johnson </option>
-                  <option value="Normal distribution ">Williams </option>
-                </select>
-              </div>
-              <div class="form-group col-lg-4">
-                <label for="inputDepartmentName">Time Slots</label>
-                <select name="" class="form-control wide" id="inputDepartmentName">
-                  <option value="Normal distribution ">10:00 AM - 11:00 AM </option>
-                  <option value="Normal distribution ">01:00 PM - 02:00 PM </option>
-                  <option value="Normal distribution ">04:00 PM - 05:00 PM</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-row ">
-              
-              <div class="form-group col-lg-4">
-                <label for="inputSymptoms">Symptoms</label>
-                <input type="text" class="form-control" id="inputSymptoms" placeholder="">
-              </div>
-              <div class="form-group col-lg-4">
-                <label for="inputDate">Choose Date </label>
-                <div class="input-group date" id="inputDate" data-date-format="mm-dd-yyyy">
-                  <input type="date" class="form-control" readonly>
-                  <span class="input-group-addon date_icon">
-                    <i class="fa fa-calendar" aria-hidden="true"></i>
-                  </span>
+    <section class="book_section layout_padding">
+      <div class="container">
+        <div class="row">
+          <div class="col">
+            <form id="appointmentForm" method="POST">
+              <h4>BOOK <span>&nbsp;APPOINTMENT</span></h4>
+              <div class="form-row">
+                <div class="form-group col-lg-4">
+                  <label for="patient_id">Patient ID:</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="patient_id"
+                    name="patient_id"
+                    readonly
+                    required
+                  />
                 </div>
               </div>
-            </div>
-            <div class="btn-box" style = "display: flex; justify-content: center;">
-              <button type="submit" class="btn ">Submit Now</button>
-            </div>
-          </form>
+              <div class="form-row">
+                <div class="form-group col-lg-4">
+                  <label for="doctor">Select Doctor:</label>
+                  <select
+                    name="doctor"
+                    class="form-control wide"
+                    id="doctor"
+                    onchange="fetchAvailableTimes()"
+                    required
+                  >
+                    <!-- {% for doctor, specialty in doctors %}
+                    <option value="{{ doctor }}">
+                      {{ doctor }} ({{ specialty }})
+                    </option>
+                    {% endfor %} -->
+                  </select>
+                </div>
+                <div class="form-group col-lg-4">
+                  <label for="date">Select Date:</label>
+                  <input
+                    type="date"
+                    class="form-control"
+                    name="date"
+                    id="date"
+                    required
+                  />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group col-lg-4">
+                  <label for="time">Select Time Slot:</label>
+                  <select
+                    name="time"
+                    class="form-control wide"
+                    id="time"
+                    required
+                  ></select>
+                </div>
+              </div>
+              <div
+                class="btn-box"
+                style="display: flex; justify-content: center"
+              >
+                <button type="submit" class="btn" id="submitBtn">
+                  Submit Now
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
+    <!-- jQuery, Bootstrap, and Scripts -->
+    <script src="js/jquery-3.4.1.min.js"></script>
+    <script src="js/bootstrap.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.3.0/js/bootstrap-datepicker.js"></script>
 
-  <!-- end book section -->
+    <script>
+      // fetch("http://127.0.0.1:5000/dashboard", {
+      //   method: "GET",
+      //   credentials: "include",
+      // })
+      //   .then((response) => response.json())
+      //   .then((data) => {
+      //     if (data.error) {
+      //       window.location.href = "login.html";
+      //     } else {
+      //       let role = data.message.replace("Welcome ", "");
+      //       if (!role.includes("Patient")) {
+      //         alert("Access denied. Only Patients can view this page.");
+      //         // window.location.href = "dashboard.html";
+      //       }
+      //     }
+      //   })
+      //   .catch((error) => console.error("Error:", error));
 
+      fetch("http://127.0.0.1:5000/dashboard", {
+        method: "GET",
+        credentials: "include",
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.error) {
+            window.location.href = "login.html";
+          } else {
+            const patientName = data.name; // Get patient name
+            const patientId = data.patient_id; // Get patient ID
 
+            // Display welcome message
+            document.getElementById("welcomeMessage").textContent =
+              "Welcome " + patientName;
 
+            // Autofill Patient ID
+            document.getElementById("patient_id").value = patientId;
 
-  <!-- jQery -->
-  <script src="js/jquery-3.4.1.min.js"></script>
-  <!-- bootstrap js -->
-  <script src="js/bootstrap.js"></script>
-  <!-- nice select -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-nice-select/1.1.0/js/jquery.nice-select.min.js" integrity="sha256-Zr3vByTlMGQhvMfgkQ5BtWRSKBGa2QlspKYJnkjZTmo=" crossorigin="anonymous"></script>
-  <!-- owl slider -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.carousel.min.js"></script>
-  <!-- datepicker -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.3.0/js/bootstrap-datepicker.js"></script>
-  <!-- custom js -->
-  <script src="js/custom.js"></script>
+            // Ensure only patients can access the page
+            if (!data.role || !data.role.includes("Patient")) {
+              alert("Access denied. Only Patients can view this page.");
+              window.location.href = "login.html";
+            }
+          }
+        })
+        .catch((error) => console.error("Error:", error));
 
+      ///////////////////////////////////////////////////////////////////////////////////////////////////
+      document
+        .getElementById("appointmentForm")
+        .addEventListener("submit", function (event) {
+          event.preventDefault(); // Prevent default form submission
 
-</body>
+          let patientId = document.getElementById("patient_id").value;
+          let doctor = document.getElementById("doctor").value;
+          let date = document.getElementById("date").value;
+          let time = document.getElementById("time").value;
 
+          if (!patientId || !doctor || !date || !time) {
+            alert("Please fill all fields.");
+            return;
+          }
+
+          let appointmentData = { patient_id: patientId, doctor, date, time };
+
+          fetch("http://127.0.0.1:5000/book-appointment-api", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(appointmentData),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.status === "success") {
+                alert("Appointment booked successfully!");
+                let savedPatientId =
+                  document.getElementById("patient_id").value;
+
+                document.getElementById("appointmentForm").reset(); // Reset form
+
+                document.getElementById("patient_id").value = savedPatientId;
+              } else {
+                alert("Error: " + data.message);
+              }
+            })
+            .catch((error) => {
+              console.error("Error booking appointment:", error);
+              alert("Failed to book appointment.");
+            });
+        });
+
+      document.addEventListener("DOMContentLoaded", function () {
+        fetchDoctors();
+      });
+      ////////////////////////////////////////////////////////////////////////////////////////////////////////
+      function fetchDoctors() {
+        fetch("http://127.0.0.1:5000/doctors")
+          .then((response) => response.json())
+          .then((data) => {
+            let doctorDropdown = document.getElementById("doctor");
+            doctorDropdown.innerHTML =
+              '<option value="">Select a Doctor</option>'; // Default option
+
+            if (data.doctors.length === 0) {
+              doctorDropdown.innerHTML =
+                '<option value="">No doctors available</option>';
+            } else {
+              data.doctors.forEach((doc) => {
+                let option = document.createElement("option");
+                option.value = doc.name;
+                option.textContent = `${doc.name} (${doc.specialty})`;
+                doctorDropdown.appendChild(option);
+              });
+            }
+          })
+          .catch((error) => {
+            console.error("Error fetching doctors:", error);
+            doctorDropdown.innerHTML =
+              '<option value="">Error loading doctors</option>';
+          });
+      }
+      //////////////////////////////////////////////////////////////////////////////////////////
+      function fetchAvailableTimes() {
+        let doctorName = document.getElementById("doctor").value;
+        let date = document.getElementById("date").value;
+        let timeDropdown = document.getElementById("time");
+        let submitBtn = document.getElementById("submitBtn");
+
+        if (!doctorName || !date) {
+          console.log("Doctor or date not selected.");
+          timeDropdown.innerHTML =
+            '<option value="">Select a Date First</option>';
+          submitBtn.disabled = true;
+          return;
+        }
+
+        let apiUrl = `http://127.0.0.1:5000/available-times/${encodeURIComponent(
+          doctorName
+        )}/${date}`;
+        // console.log("Fetching:", apiUrl); // Debugging line
+
+        fetch(apiUrl)
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`Server error: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then((data) => {
+            // console.log("Available Times:", data); // Debugging line
+            timeDropdown.innerHTML = ""; // Clear old options
+            if (data.available_times.length === 0) {
+              timeDropdown.innerHTML =
+                '<option value="">No slots available</option>';
+              submitBtn.disabled = true;
+            } else {
+              data.available_times.forEach((time) => {
+                let option = document.createElement("option");
+                option.value = time;
+                option.textContent = time;
+                timeDropdown.appendChild(option);
+              });
+              submitBtn.disabled = false;
+            }
+          })
+          .catch((error) => {
+            console.error("Error fetching available times:", error);
+            timeDropdown.innerHTML =
+              '<option value="">Error loading slots</option>';
+            submitBtn.disabled = true;
+          });
+      }
+
+      document
+        .getElementById("date")
+        .addEventListener("change", fetchAvailableTimes);
+      document
+        .getElementById("doctor")
+        .addEventListener("change", fetchAvailableTimes);
+    </script>
+  </body>
 </html>
