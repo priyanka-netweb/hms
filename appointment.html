@@ -10,124 +10,33 @@
     <link rel="stylesheet" href="css/font-awesome.min.css" />
     <link rel="stylesheet" href="css/style.css" />
     <link rel="stylesheet" href="css/responsive.css" />
+    <link rel="stylesheet" href="css/appointment.css" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.3.0/css/datepicker.css"
     />
 
-    <style>
-      /* General Section Styling */
-      .book_section {
-        padding: 60px 0;
-        background-color: #f8f9fa;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-
-      /* Center the Heading */
-      .book_section h4 {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-size: 26px;
-        font-weight: bold;
-        text-transform: uppercase;
-        color: #333;
-        position: relative;
-        margin-bottom: 40px;
-      }
-
-      /* Underline Effect for Heading */
-      .book_section h4::before {
-        content: "";
-        position: absolute;
-        bottom: -10px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 75px;
-        height: 3px;
-        background-color: #00c6a9;
-        border-radius: 2px;
-      }
-
-      /* Center the Form */
-      .container {
-        max-width: 600px; /* Restricts width for better alignment */
-        width: 100%;
-      }
-
-      /* Align Form Fields Properly */
-      .form-row {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 20px;
-      }
-
-      /* Form Groups */
-      .form-group {
-        width: 100%;
-        max-width: 400px; /* Ensures all inputs are aligned */
-        text-align: left;
-      }
-
-      /* Labels */
-      .form-group label {
-        font-weight: 600;
-        color: #444;
-        display: block;
-        margin-bottom: 5px;
-      }
-
-      /* Input Fields */
-      .form-control {
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        transition: border 0.3s ease-in-out;
-      }
-
-      /* Input Focus Effect */
-      .form-control:focus {
-        border-color: #00c6a9;
-        outline: none;
-        box-shadow: 0 0 5px rgba(0, 198, 169, 0.5);
-      }
-
-      /* Center the Button */
-      .btn-box {
-        display: flex;
-        justify-content: center;
-        margin-top: 20px;
-      }
-
-      /* Button Styling */
-      .btn {
-        background-color: #00c6a9;
-        color: #fff;
-        padding: 12px 25px;
-        font-size: 16px;
-        font-weight: bold;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: background 0.3s ease-in-out;
-      }
-
-      /* Button Hover Effect */
-      .btn:hover {
-        background-color: #009c89;
-      }
-    </style>
+    
   </head>
   <body>
     <!-- Patient Welcome Message -->
-    <h2
-      id="welcomeMessage"
-      style="text-align: center; margin-top: 20px; color: #333"
-    ></h2>
+    <div class="welcome-container">
+      <h2 id="welcomeMessage"></h2>
+    </div>
+
+    <style>
+      .welcome-container {
+        text-align: center;
+        margin-bottom: 20px;
+        padding: 15px;
+        background-color: #00c6a9;
+        color: white;
+        font-size: 22px;
+        font-weight: bold;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+    </style>
 
     <section class="book_section layout_padding">
       <div class="container">
@@ -157,13 +66,7 @@
                     id="doctor"
                     onchange="fetchAvailableTimes()"
                     required
-                  >
-                    <!-- {% for doctor, specialty in doctors %}
-                    <option value="{{ doctor }}">
-                      {{ doctor }} ({{ specialty }})
-                    </option>
-                    {% endfor %} -->
-                  </select>
+                  ></select>
                 </div>
                 <div class="form-group col-lg-4">
                   <label for="date">Select Date:</label>
@@ -187,14 +90,14 @@
                   ></select>
                 </div>
               </div>
-              <div
-                class="btn-box"
-                style="display: flex; justify-content: center"
-              >
+              <div class="btn-box">
                 <button type="submit" class="btn" id="submitBtn">
                   Submit Now
                 </button>
+                
               </div>
+              <button id="logoutBtn" class="btn-danger btn-sm d-block mx-auto mt-4">Logout</button>
+
             </form>
           </div>
         </div>
@@ -204,27 +107,9 @@
     <!-- jQuery, Bootstrap, and Scripts -->
     <script src="js/jquery-3.4.1.min.js"></script>
     <script src="js/bootstrap.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.3.0/js/bootstrap-datepicker.js"></script>
 
     <script>
-      // fetch("http://127.0.0.1:5000/dashboard", {
-      //   method: "GET",
-      //   credentials: "include",
-      // })
-      //   .then((response) => response.json())
-      //   .then((data) => {
-      //     if (data.error) {
-      //       window.location.href = "login.html";
-      //     } else {
-      //       let role = data.message.replace("Welcome ", "");
-      //       if (!role.includes("Patient")) {
-      //         alert("Access denied. Only Patients can view this page.");
-      //         // window.location.href = "dashboard.html";
-      //       }
-      //     }
-      //   })
-      //   .catch((error) => console.error("Error:", error));
-
+      // Fetch patient details from session
       fetch("http://127.0.0.1:5000/dashboard", {
         method: "GET",
         credentials: "include",
@@ -239,13 +124,13 @@
 
             // Display welcome message
             document.getElementById("welcomeMessage").textContent =
-              "Welcome " + patientName;
+              "Welcome " + patientName + "!";
 
             // Autofill Patient ID
             document.getElementById("patient_id").value = patientId;
 
             // Ensure only patients can access the page
-            if (!data.role || !data.role.includes("Patient")) {
+            if (!data.role.includes("Patient")) {
               alert("Access denied. Only Patients can view this page.");
               window.location.href = "login.html";
             }
@@ -377,6 +262,20 @@
             submitBtn.disabled = true;
           });
       }
+
+      document
+        .getElementById("logoutBtn")
+        .addEventListener("click", function () {
+          fetch("http://127.0.0.1:5000/logout", {
+            method: "POST",
+            credentials: "include",
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              alert(data.message);
+              window.location.href = "login.html";
+            });
+        });
 
       document
         .getElementById("date")

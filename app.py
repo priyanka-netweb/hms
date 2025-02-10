@@ -4,15 +4,17 @@ from flask_bcrypt import Bcrypt
 from config import Config
 from models import db, User, Doctor, Patient, Appointment  # Import models
 from datetime import datetime, timedelta
+import re
 
 
 app = Flask(__name__)
 app.config.from_object(Config)
 
-app.config["SECRET_KEY"] = "priyanka"
+app.config["SECRET_KEY"] = "priyanka"  # this must stay constant
 db.init_app(app)
 bcrypt = Bcrypt(app)
 CORS(app, supports_credentials=True)
+
 
 #### sign up ####
 @app.route("/signup", methods=["POST"])
@@ -35,9 +37,11 @@ def signup():
     # Create a new User
     new_user = User(name=data["name"], email=data["email"], role=data["role"])
     new_user.set_password(data["password"])
+
     try:
         db.session.add(new_user)
         db.session.commit()  # Commit the user record to generate ID
+
     except Exception as e:
         db.session.rollback()  # Rollback if error occurs
         return jsonify({"error": f"Error adding user: {str(e)}"}), 500
@@ -51,38 +55,45 @@ def signup():
             new_doctor = Doctor(
                 id=user_id,
                 name=data["name"],
+                email =data["email"],
                 specialty=data.get("specialty", "General"),
                 available_slots=data.get("available_slots", "9:00AM-5:00PM"),
             )
             db.session.add(new_doctor)
-            db.session.commit()  # Commit doctor record
+            db.session.commit()
         except Exception as e:
-            db.session.rollback()  # Rollback if error occurs
+            db.session.rollback()
             return jsonify({"error": f"Error adding doctor: {str(e)}"}), 500
     elif data["role"] == "Patient":
         try:
             new_patient = Patient(id=user_id, name=data["name"], email=data["email"])
             db.session.add(new_patient)
-            db.session.commit()  # Commit patient record
+            db.session.commit()
         except Exception as e:
-            db.session.rollback()  # Rollback if error occurs
+            db.session.rollback()
             return jsonify({"error": f"Error adding patient: {str(e)}"}), 500
 
     return jsonify({"message": "User registered successfully!"}), 201
+
 
 #### login ####
 # we use POST to create a new resource, PUT to update an existing resource, and DELETE to remove a resource.
 @app.route("/login", methods=["POST"])
 def login():
     data = request.get_json()
-    user = User.query.filter_by(email=data["email"]).first()
+    email = data.get("email")
+    password = data.get("password")
 
-    if user and user.check_password(data["password"]):
+    user = User.query.filter_by(email=email).first()
+
+    if user and user.check_password(password):  # Use check_password method
         session["user_id"] = user.id
         session["role"] = user.role
-        return jsonify({"message": "Login successful!", "role": user.role})
+        session["email"] = user.email
+        return jsonify({"message": f"Welcome {user.role}", "role": user.role}), 200
     else:
-        return jsonify({"error": "Invalid email or password"}), 401
+        return jsonify({"error": "Invalid credentials"}), 401
+
 
 #### logout ####
 @app.route("/logout", methods=["POST"])
@@ -91,29 +102,44 @@ def logout():
     return jsonify({"message": "Logged out successfully!"})
 
 
-# @app.route("/dashboard", methods=["GET"])
-# def dashboard():
-#     if "user_id" not in session:
-#         return jsonify({"error": "Unauthorized"}), 401
-#     return jsonify({"message": f"Welcome {session['role']}!"})
-
 @app.route("/dashboard", methods=["GET"])
 def dashboard():
     if "role" not in session or "user_id" not in session:
         return jsonify({"error": "Unauthorized"}), 401
 
     if session["role"] == "Patient":
-        patient = Patient.query.get(session["user_id"])  
+        patient = Patient.query.get(session["user_id"])
         if patient:
-            return jsonify({
-                "message": f"Welcome {patient.name}", 
-                "name": patient.name,
-                "patient_id": patient.id,
-                "role": "Patient" 
-            })
-    
-    return jsonify({"error": "Access denied"}), 403
+            return jsonify(
+                {
+                    "message": f"Welcome {patient.name}",
+                    "name": patient.name,
+                    "patient_id": patient.id,
+                    "role": "Patient",
+                }
+            )
 
+    elif session["role"] == "Doctor":
+        doctor = Doctor.query.get(session["user_id"])
+        if doctor:
+            return jsonify(
+                {
+                    "message": f"Welcome Dr. {doctor.name}",
+                    "name": doctor.name,
+                    "doctor_id": doctor.id,
+                    "role": "Doctor",
+                }
+            )
+
+    elif session["role"] == "Admin":
+        return jsonify(
+            {
+                # "message": "Welcome Admin",
+                "role": "Admin"
+            }
+        )
+
+    return jsonify({"error": "Access denied"}), 403
 
 
 # @app.route("/admin/doctors", methods=["GET"])
@@ -132,6 +158,8 @@ def dashboard():
 
 
 #####################################APPOINTMENT BOOKING##################################################
+
+
 @app.route("/doctors", methods=["GET"])
 def get_doctors():
     doctors = Doctor.query.all()
@@ -239,13 +267,222 @@ def book_appointment_api():
     try:
         db.session.add(new_appointment)
         db.session.commit()
-        return jsonify({"status": "success", "message": "Appointment booked successfully!"})
+        return jsonify(
+            {"status": "success", "message": "Appointment booked successfully!"}
+        )
     except Exception as e:
         db.session.rollback()
         return jsonify({"status": "error", "message": f"Database error: {str(e)}"}), 500
 
 
-#####################################APPOINTMENT BOOKING##################################################
+#######################################APPOINTMENT BOOKING##################################################
+
+
+########################################DOCTOR DASHBOARD#################################################
+
+
+@app.route("/doctor/appointments", methods=["GET"])
+def get_doctor_appointments():
+    if "role" not in session or session["role"] != "Doctor":
+        return jsonify({"error": "Unauthorized"}), 403
+
+    doctor_id = session["user_id"]
+    appointments = Appointment.query.filter_by(doctor_id=doctor_id).all()
+
+    if not appointments:
+        return jsonify([])  # Return an empty list if no appointments found
+
+    appointment_list = []
+    for app in appointments:
+        patient = Patient.query.get(app.patient_id)
+        appointment_list.append(
+            {
+                "id": app.id,
+                "patient_name": patient.name if patient else "Unknown",
+                "date": app.date,
+                "time": app.time_slot,
+                "status": app.status,  # Include the status field
+            }
+        )
+
+    return jsonify(appointment_list)
+
+
+
+@app.route("/doctor/appointments/<int:appointment_id>", methods=["DELETE"])
+def delete_appointment(appointment_id):
+    if "role" not in session or session["role"] != "Doctor":
+        return jsonify({"error": "Unauthorized"}), 403
+
+    appointment = Appointment.query.get(appointment_id)
+    if not appointment:
+        return jsonify({"error": "Appointment not found"}), 404
+
+    if appointment.doctor_id != session["user_id"]:
+        return jsonify({"error": "Unauthorized to delete this appointment"}), 403
+
+    db.session.delete(appointment)
+    db.session.commit()
+    return jsonify({"message": "Appointment deleted successfully"})
+
+
+@app.route("/doctor/appointments/<int:appointment_id>/done", methods=["PUT"])
+def mark_appointment_done(appointment_id):
+    if "role" not in session or session["role"] != "Doctor":
+        return jsonify({"error": "Unauthorized"}), 403
+
+    appointment = Appointment.query.get(appointment_id)
+    if not appointment:
+        return jsonify({"error": "Appointment not found"}), 404
+
+    if appointment.doctor_id != session["user_id"]:
+        return jsonify({"error": "Unauthorized to mark this appointment"}), 403
+
+    appointment.status = "done"  # Add a "status" column to your Appointment table if it doesn't exist
+    db.session.commit()
+    return jsonify({"message": "Appointment marked as done"})
+
+
+
+########################################DOCTOR DASHBOARD#################################################
+
+
+######################################## ADMIN DASHBOARD #################################################
+
+
+# Fetch all doctors
+@app.route("/admin/doctors", methods=["GET"])
+def list_doctors():
+    if session.get("role") != "Admin":
+        return jsonify({"error": "Unauthorized"}), 403
+    doctors = Doctor.query.all()
+    return jsonify(
+        [
+            {"id": doc.id, "name": doc.name, "email": doc.email, "specialty": doc.specialty}
+            for doc in doctors
+        ]
+    )
+
+
+
+# Fetch all patients
+@app.route("/admin/patients", methods=["GET"])
+def list_patients():
+    if session.get("role") != "Admin":
+        return jsonify({"error": "Unauthorized"}), 403
+    patients = Patient.query.all()
+    return jsonify(
+        [{"id": pat.id, "name": pat.name, "email": pat.email} for pat in patients]
+    )
+
+
+# Fetch all admins
+@app.route("/admin/admins", methods=["GET"])
+def list_admins():
+    if session.get("role") != "Admin":
+        return jsonify({"error": "Unauthorized"}), 403
+    admins = User.query.filter_by(role="Admin").all()
+    return jsonify(
+        [{"id": admin.id, "name": admin.name, "email": admin.email} for admin in admins]
+    )
+
+
+# Delete a doctor
+@app.route('/admin/doctors/<int:doctor_id>', methods=['DELETE'])
+def delete_doctor(doctor_id):
+    if session.get("role") != "Admin":
+        return jsonify({"error": "Unauthorized"}), 403
+
+    doctor = db.session.get(Doctor, doctor_id)
+    user = db.session.get(User, doctor_id)  # Assuming doctor_id == user_id
+
+    if not doctor or not user:
+        return jsonify({"message": "Doctor not found"}), 404
+
+    try:
+        # Delete all appointments associated with the doctor
+        Appointment.query.filter_by(doctor_id=doctor_id).delete()
+
+        # Delete the doctor and user
+        db.session.delete(doctor)
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({"message": "Doctor and associated appointments deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+
+# Delete a patient
+@app.route("/admin/patients/<int:patient_id>", methods=["DELETE"])
+def delete_patient(patient_id):
+    if session.get("role") != "Admin":
+        return jsonify({"error": "Unauthorized"}), 403
+
+    patient = Patient.query.get(patient_id)
+    user = User.query.get(patient_id)  # Assuming patient_id corresponds to user_id
+
+    if not patient or not user:
+        return jsonify({"error": "Patient not found"}), 404
+
+    try:
+        db.session.delete(patient)
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({"message": "Patient deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+
+# Delete an admin
+@app.route("/admin/admins/<int:admin_id>", methods=["DELETE"])
+def delete_admin(admin_id):
+    if session.get("role") != "Admin":
+        return jsonify({"error": "Unauthorized"}), 403
+
+    admin = User.query.get(admin_id)
+
+    if not admin or admin.role != "Admin":
+        return jsonify({"error": "Admin not found"}), 404
+
+    try:
+        db.session.delete(admin)
+        db.session.commit()
+        return jsonify({"message": "Admin deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+# Add a new admin
+@app.route("/admin/add_admin", methods=["POST"])
+def add_admin():
+    if session.get("role") != "Admin":
+        return jsonify({"error": "Unauthorized"}), 403
+
+    data = request.get_json()
+    name = data.get("name")
+    email = data.get("email")
+    password = data.get("password")
+
+    if not name or not email or not password:
+        return jsonify({"error": "Missing required fields"}), 400
+
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "Email already exists"}), 400
+
+    new_admin = User(name=name, email=email, role="Admin")
+    new_admin.set_password(password)
+
+    db.session.add(new_admin)
+    db.session.commit()
+    return jsonify({"message": "Admin added successfully"}), 201
+
+
+######################################## ADMIN DASHBOARD #################################################
 
 
 if __name__ == "__main__":
