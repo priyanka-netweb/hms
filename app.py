@@ -421,20 +421,30 @@ def delete_doctor(doctor_id):
 
 
 # Delete a patient
-@app.route("/admin/patients/<int:patient_id>", methods=["DELETE"])
+@app.route("/admin/patients/<int:patient_id>", methods=["DELETE", "OPTIONS"])
 def delete_patient(patient_id):
+    if request.method == "OPTIONS":
+        response = jsonify({"message": "CORS preflight successful"})
+        response.status_code = 200
+        return response  # 👈 Handles preflight requests
+
     if session.get("role") != "Admin":
         return jsonify({"error": "Unauthorized"}), 403
 
-    patient = Patient.query.get(patient_id)
-    user = User.query.get(patient_id)  # Assuming patient_id corresponds to user_id
+    patient = db.session.get(Patient, patient_id)
+    user = db.session.get(User, patient_id)
 
     if not patient or not user:
         return jsonify({"error": "Patient not found"}), 404
 
     try:
+        # Delete related appointments first
+        Appointment.query.filter_by(patient_id=patient_id).delete()
+
+        # Delete patient and user records
         db.session.delete(patient)
         db.session.delete(user)
+
         db.session.commit()
         return jsonify({"message": "Patient deleted successfully"}), 200
     except Exception as e:
