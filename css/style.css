@@ -1130,3 +1130,36 @@ a:focus {
   color: inherit;
 }
 /*# sourceMappingURL=style.css.map */
+
+/* priyanka's code for navabar */
+.navbar {
+  background-color: #252525; /* Match the dark theme */
+  padding: 15px 0;
+}
+
+.navbar-brand {
+  font-size: 24px;
+  font-weight: 700;
+  color: #00c6a9 !important; /* Match system colors */
+  background: none !important; /* Remove any background */
+  padding: 0 !important; /* Remove extra padding */
+  margin: 0 !important; /* Remove extra margin */
+  box-shadow: none !important; /* Remove any shadow */
+  border: none !important; /* Remove any border */
+}
+
+.navbar-nav .nav-link {
+  font-size: 18px;
+  font-weight: 500;
+  color: #ffffff !important;
+  margin-left: 15px;
+}
+
+.navbar-nav .nav-link.btn {
+  background-color: #007bff; /* Match button styling */
+  border-radius: 5px;
+}
+
+.navbar-toggler {
+  border-color: #ffffff;
+}

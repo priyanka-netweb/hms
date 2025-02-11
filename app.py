@@ -4,8 +4,6 @@ from flask_bcrypt import Bcrypt
 from config import Config
 from models import db, User, Doctor, Patient, Appointment  # Import models
 from datetime import datetime, timedelta
-import re
-
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -55,7 +53,7 @@ def signup():
             new_doctor = Doctor(
                 id=user_id,
                 name=data["name"],
-                email =data["email"],
+                email=data["email"],
                 specialty=data.get("specialty", "General"),
                 available_slots=data.get("available_slots", "9:00AM-5:00PM"),
             )
@@ -308,7 +306,6 @@ def get_doctor_appointments():
     return jsonify(appointment_list)
 
 
-
 @app.route("/doctor/appointments/<int:appointment_id>", methods=["DELETE"])
 def delete_appointment(appointment_id):
     if "role" not in session or session["role"] != "Doctor":
@@ -338,10 +335,11 @@ def mark_appointment_done(appointment_id):
     if appointment.doctor_id != session["user_id"]:
         return jsonify({"error": "Unauthorized to mark this appointment"}), 403
 
-    appointment.status = "done"  # Add a "status" column to your Appointment table if it doesn't exist
+    appointment.status = (
+        "done"  # Add a "status" column to your Appointment table if it doesn't exist
+    )
     db.session.commit()
     return jsonify({"message": "Appointment marked as done"})
-
 
 
 ########################################DOCTOR DASHBOARD#################################################
@@ -358,11 +356,15 @@ def list_doctors():
     doctors = Doctor.query.all()
     return jsonify(
         [
-            {"id": doc.id, "name": doc.name, "email": doc.email, "specialty": doc.specialty}
+            {
+                "id": doc.id,
+                "name": doc.name,
+                "email": doc.email,
+                "specialty": doc.specialty,
+            }
             for doc in doctors
         ]
     )
-
 
 
 # Fetch all patients
@@ -388,7 +390,7 @@ def list_admins():
 
 
 # Delete a doctor
-@app.route('/admin/doctors/<int:doctor_id>', methods=['DELETE'])
+@app.route("/admin/doctors/<int:doctor_id>", methods=["DELETE"])
 def delete_doctor(doctor_id):
     if session.get("role") != "Admin":
         return jsonify({"error": "Unauthorized"}), 403
@@ -407,11 +409,15 @@ def delete_doctor(doctor_id):
         db.session.delete(doctor)
         db.session.delete(user)
         db.session.commit()
-        return jsonify({"message": "Doctor and associated appointments deleted successfully"}), 200
+        return (
+            jsonify(
+                {"message": "Doctor and associated appointments deleted successfully"}
+            ),
+            200,
+        )
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
-
 
 
 # Delete a patient
@@ -434,7 +440,6 @@ def delete_patient(patient_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
-
 
 
 # Delete an admin

@@ -1,104 +1,146 @@
 <!DOCTYPE html>
 <html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <title>Signup</title>
 
-<head>
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-  <title>Signup</title>
+    <!-- Bootstrap core CSS -->
+    <link rel="stylesheet" type="text/css" href="css/bootstrap.css" />
+    <!-- Fonts style -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Font Awesome -->
+    <link href="css/font-awesome.min.css" rel="stylesheet" />
+    <!-- Nice Select -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/jquery-nice-select/1.1.0/css/nice-select.min.css"
+    />
+    <!-- Custom Styles -->
+    <link href="css/style.css" rel="stylesheet" />
+    <link href="css/responsive.css" rel="stylesheet" />
+  </head>
 
-  <!-- Bootstrap core CSS -->
-  <link rel="stylesheet" type="text/css" href="css/bootstrap.css" />
-  <!-- Fonts style -->
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
-  <!-- Font Awesome -->
-  <link href="css/font-awesome.min.css" rel="stylesheet" />
-  <!-- Nice Select -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-nice-select/1.1.0/css/nice-select.min.css" />
-  <!-- Custom Styles -->
-  <link href="css/style.css" rel="stylesheet" />
-  <link href="css/responsive.css" rel="stylesheet" />
-</head>
+  <body>
+    <!-- Navbar -->
+    <div id="navbarContainer"></div>
 
-<body>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        fetch("navbar.html")
+          .then((response) => response.text())
+          .then((html) => {
+            document.getElementById("navbarContainer").innerHTML = html;
+          })
+          .catch((error) => console.error("Error loading navbar:", error));
+      });
+    </script>
+    <!-- Signup Section -->
+    <section class="book_section layout_padding">
+      <div class="container">
+        <div class="row">
+          <div class="col">
+            <form id="signupForm">
+              <h4>User <span>Sign up</span></h4>
 
-  <!-- Signup Section -->
-  <section class="book_section layout_padding">
-    <div class="container">
-      <div class="row">
-        <div class="col">
-          <form id="signupForm">
-            <h4>User <span>Sign up</span></h4>
-
-            <div class="form-row">
-              <div class="form-group col-lg-4">
-                <label for="name">Full Name</label>
-                <input type="text" class="form-control" id="name" placeholder="Your Name" required>
+              <div class="form-row">
+                <div class="form-group col-lg-4">
+                  <label for="name">Full Name</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="name"
+                    placeholder="Your Name"
+                    required
+                  />
+                </div>
+                <div class="form-group col-lg-4">
+                  <label for="email">Email</label>
+                  <input
+                    type="email"
+                    class="form-control"
+                    id="email"
+                    placeholder="example@xyz.com"
+                    required
+                  />
+                </div>
+                <div class="form-group col-lg-4">
+                  <label for="password">Password</label>
+                  <input
+                    type="password"
+                    class="form-control"
+                    id="password"
+                    placeholder="********"
+                    required
+                  />
+                </div>
+                <div class="form-group col-lg-4">
+                  <label for="role">Role</label>
+                  <select class="form-control wide" id="role" required>
+                    <option value="Patient">Patient</option>
+                    <option value="Doctor">Doctor</option>
+                    <option value="Admin">Admin</option>
+                    <!-- <option value="Admin">Admin</option> -->
+                  </select>
+                </div>
               </div>
-              <div class="form-group col-lg-4">
-                <label for="email">Email</label>
-                <input type="email" class="form-control" id="email" placeholder="example@xyz.com" required>
-              </div>
-              <div class="form-group col-lg-4">
-                <label for="password">Password</label>
-                <input type="password" class="form-control" id="password" placeholder="********" required>
-              </div>
-              <div class="form-group col-lg-4">
-                <label for="role">Role</label>
-                <select class="form-control wide" id="role" required>
-                  <option value="Patient">Patient</option>
-                  <option value="Doctor">Doctor</option>
-                  <option value="Admin">Admin</option>
-                  <!-- <option value="Admin">Admin</option> -->
-                </select>
-              </div>
-            </div>
 
-
-            
-            <div class="btn-box">
-              <button type="submit" class="btn">Sign Up</button>
-              <a href="http://127.0.0.1:5501/login.html">Go to Login</a>
-            </div>
-          </form>
+              <div class="btn-box">
+                <button type="submit" class="btn">Sign Up</button>
+                <a class="nav-link btn btn-box text-black" href="login.html"
+                  >Already have an account?</a
+                >
+              </div>
+            </form>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- jQuery -->
-  <script src="js/jquery-3.4.1.min.js"></script>
-  <!-- Bootstrap -->
-  <script src="js/bootstrap.js"></script>
-  <!-- Nice Select -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-nice-select/1.1.0/js/jquery.nice-select.min.js"></script>
+    <!-- jQuery -->
+    <script src="js/jquery-3.4.1.min.js"></script>
+    <!-- Bootstrap -->
+    <script src="js/bootstrap.js"></script>
+    <!-- Nice Select -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-nice-select/1.1.0/js/jquery.nice-select.min.js"></script>
 
+    <script>
+      document
+        .getElementById("signupForm")
+        .addEventListener("submit", function (event) {
+          event.preventDefault();
 
-  
-  <script>
-    document.getElementById("signupForm").addEventListener("submit", function(event) {
-        event.preventDefault();
+          const name = document.getElementById("name").value;
+          const email = document.getElementById("email").value;
+          const password = document.getElementById("password").value;
+          const role = document.getElementById("role").value;
 
-        const name = document.getElementById("name").value;
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
-        const role = document.getElementById("role").value;
-
-        fetch("http://127.0.0.1:5000/signup", {
+          fetch("http://127.0.0.1:5000/signup", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: name, email: email, password: password, role: role })
-        })
-        .then(response => response.json())
-        .then(data => {
-            alert(data.message || data.error);
-            if (data.message) {
-                window.location.href = "login.html";  // Redirect to login page after signup
-            }
-        })
-        .catch(error => console.error("Error:", error));
-    });
-  </script>
-
-</body>
+            body: JSON.stringify({
+              name: name,
+              email: email,
+              password: password,
+              role: role,
+            }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              alert(data.message || data.error);
+              if (data.message) {
+                window.location.href = "login.html"; // Redirect to login page after signup
+              }
+            })
+            .catch((error) => console.error("Error:", error));
+        });
+    </script>
+  </body>
 </html>

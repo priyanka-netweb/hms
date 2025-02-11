@@ -2,7 +2,7 @@
 <html>
   <head>
     <!-- Basic -->
-     
+
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <!-- Mobile Metas -->
@@ -34,11 +34,28 @@
     />
 
     <!-- Custom Styles -->
+    <link rel="stylesheet" type="text/css" href="css/bootstrap.css" />
+    <link href="css/font-awesome.min.css" rel="stylesheet" />
     <link href="css/style.css" rel="stylesheet" />
     <link href="css/responsive.css" rel="stylesheet" />
   </head>
 
   <body>
+    <!-- Navbar -->
+    <div id="navbarContainer"></div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        fetch("navbar.html")
+          .then((response) => response.text())
+          .then((html) => {
+            document.getElementById("navbarContainer").innerHTML = html;
+          })
+          .catch((error) => console.error("Error loading navbar:", error));
+      });
+    </script>
+
+
     <!-- Login Section -->
     <section class="book_section layout_padding">
       <div class="container">
@@ -73,7 +90,10 @@
 
               <div class="btn-box">
                 <button type="submit" class="btn">Login</button>
-                <a href="http://127.0.0.1:5501/signup.html">Go to Sign up</a>
+                <!-- <a href="http://127.0.0.1:5501/signup.html">Go to Sign up</a> -->
+                <a class="nav-link btn btn-box text-black" href="signup.html"
+                  >Create an account?</a
+                >
               </div>
             </form>
           </div>
@@ -90,7 +110,7 @@
 
     <!-- Login Form Script -->
     <script>
-      credentials: "include"
+      credentials: "include";
       document
         .getElementById("loginForm")
         .addEventListener("submit", function (event) {
