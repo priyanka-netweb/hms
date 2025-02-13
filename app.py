@@ -17,7 +17,7 @@ CORS(app, supports_credentials=True)
 #### sign up ####
 @app.route("/signup", methods=["POST"])
 def signup():
-    data = request.get_json()
+    data = request.get_json() # Get JSON data from request from front-end
 
     # Validate input
     if (
@@ -140,21 +140,6 @@ def dashboard():
     return jsonify({"error": "Access denied"}), 403
 
 
-# @app.route("/admin/doctors", methods=["GET"])
-# def list_doctors():
-#     if session.get("role") != "Admin":
-#         return jsonify({"error": "Unauthorized"}), 403
-#     doctors = Doctor.query.all()
-#     return jsonify([{"id": doc.id, "name": doc.name} for doc in doctors])
-
-# @app.route("/admin/patients", methods=["GET"])
-# def list_patients():
-#     if session.get("role") != "Admin":
-#         return jsonify({"error": "Unauthorized"}), 403
-#     patients = Patient.query.all()
-#     return jsonify([{"id": pat.id, "name": pat.name} for pat in patients])
-
-
 #####################################APPOINTMENT BOOKING##################################################
 
 
@@ -195,42 +180,42 @@ def available_times(doctor_name, date):
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
 
-@app.route("/patient/book_appointment", methods=["POST"])
-def book_appointment():
-    if session.get("role") != "Patient":
-        return jsonify({"error": "Unauthorized"}), 403
+# @app.route("/patient/book_appointment", methods=["POST"])
+# def book_appointment():
+#     if session.get("role") != "Patient":
+#         return jsonify({"error": "Unauthorized"}), 403
 
-    data = request.get_json()
+#     data = request.get_json()
 
-    doctor = Doctor.query.filter_by(name=data["doctor"]).first()
-    if not doctor:
-        return jsonify({"error": "Doctor not found"}), 404
+#     doctor = Doctor.query.filter_by(name=data["doctor"]).first()
+#     if not doctor:
+#         return jsonify({"error": "Doctor not found"}), 404
 
-    # Check if the time slot is already booked
-    existing_appointment = Appointment.query.filter_by(
-        doctor_id=doctor.id, date=data["date"], time_slot=data["time_slot"]
-    ).first()
+#     # Check if the time slot is already booked
+#     existing_appointment = Appointment.query.filter_by(
+#         doctor_id=doctor.id, date=data["date"], time_slot=data["time_slot"]
+#     ).first()
 
-    if existing_appointment:
-        return (
-            jsonify(
-                {"error": "This time slot is already taken. Please choose another one."}
-            ),
-            400,
-        )
+#     if existing_appointment:
+#         return (
+#             jsonify(
+#                 {"error": "This time slot is already taken. Please choose another one."}
+#             ),
+#             400,
+#         )
 
-    # If the slot is free, create the appointment
-    new_appointment = Appointment(
-        patient_id=session["user_id"],
-        doctor_id=doctor.id,
-        date=data["date"],
-        time_slot=data["time_slot"],
-    )
+#     # If the slot is free, create the appointment
+#     new_appointment = Appointment(
+#         patient_id=session["user_id"],
+#         doctor_id=doctor.id,
+#         date=data["date"],
+#         time_slot=data["time_slot"],
+#     )
 
-    db.session.add(new_appointment)
-    db.session.commit()
+#     db.session.add(new_appointment)
+#     db.session.commit()
 
-    return jsonify({"message": "Appointment booked successfully!"})
+#     return jsonify({"message": "Appointment booked successfully!"})
 
 
 @app.route("/book-appointment-api", methods=["POST"])
@@ -473,28 +458,28 @@ def delete_admin(admin_id):
 
 
 # Add a new admin
-@app.route("/admin/add_admin", methods=["POST"])
-def add_admin():
-    if session.get("role") != "Admin":
-        return jsonify({"error": "Unauthorized"}), 403
+# @app.route("/admin/add_admin", methods=["POST"])
+# def add_admin():
+#     if session.get("role") != "Admin":
+#         return jsonify({"error": "Unauthorized"}), 403
 
-    data = request.get_json()
-    name = data.get("name")
-    email = data.get("email")
-    password = data.get("password")
+#     data = request.get_json()
+#     name = data.get("name")
+#     email = data.get("email")
+#     password = data.get("password")
 
-    if not name or not email or not password:
-        return jsonify({"error": "Missing required fields"}), 400
+#     if not name or not email or not password:
+#         return jsonify({"error": "Missing required fields"}), 400
 
-    if User.query.filter_by(email=email).first():
-        return jsonify({"error": "Email already exists"}), 400
+#     if User.query.filter_by(email=email).first():
+#         return jsonify({"error": "Email already exists"}), 400
 
-    new_admin = User(name=name, email=email, role="Admin")
-    new_admin.set_password(password)
+#     new_admin = User(name=name, email=email, role="Admin")
+#     new_admin.set_password(password)
 
-    db.session.add(new_admin)
-    db.session.commit()
-    return jsonify({"message": "Admin added successfully"}), 201
+#     db.session.add(new_admin)
+#     db.session.commit()
+#     return jsonify({"message": "Admin added successfully"}), 201
 
 
 ######################################## ADMIN DASHBOARD #################################################
