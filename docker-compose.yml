@@ -1,0 +1,41 @@
+version: "3.8"
+
+services:
+  hms_debug:
+    image: priyankanetweb/hms-2:0.0.1.RELEASE
+    container_name: hms_debug
+    command: gunicorn --bind 0.0.0.0:5000 app:app
+    ports:
+      - "5000:5000"
+      - "5678:5678"
+    environment:
+      - FLASK_ENV=development
+    depends_on:
+      - db
+
+  hms_prod:
+    image: priyankanetweb/hms-2:0.0.1.RELEASE
+    container_name: hms_prod
+    command: gunicorn --bind 0.0.0.0:5001 app:app
+    ports:
+      - "5001:5001"
+    environment:
+      - FLASK_ENV=production
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15
+    container_name: postgres_db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: hms_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
