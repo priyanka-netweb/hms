@@ -1,23 +1,4 @@
 
-# # Use the latest official Python image
-# FROM python:3.13.1
-
-# # Set the working directory inside the container
-# WORKDIR /app
-
-# # Copy requirements.txt and install dependencies
-# COPY requirements.txt .
-# RUN pip install --no-cache-dir -r requirements.txt
-
-# # Copy the rest of the application files
-# COPY . .
-
-# # Expose the port Flask runs on
-# EXPOSE 5000
-
-# # Command to run the Flask app
-# CMD ["python", "app.py"]
-
 ###### multi-stage Docker build with separate debug and production configurations ####### Stage 1: Base image
 FROM python:3.13 AS base
 
