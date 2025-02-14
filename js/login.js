@@ -1,4 +1,3 @@
-credentials: "include";
 document
   .getElementById("loginForm")
   .addEventListener("submit", function (event) {

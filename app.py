@@ -9,13 +9,14 @@ from datetime import datetime, timedelta
 app = Flask(__name__)
 app.config.from_object(Config)
 app.config["SECRET_KEY"] = "priyanka"  # This must stay constant for session security
+SESSION_COOKIE_SECURE = True  # Ensures cookies are only sent over HTTPS.
 
 # Initialize extensions
 db.init_app(app)
 bcrypt = Bcrypt(app)
 CORS(app, supports_credentials=True)
 
-# ------------------------- AUTHENTICATION & AUTHORIZATION -------------------------
+# ------------------------- AUTHENTICATION & AUTHORIZATION using session-based authentication -------------------------
 
 
 @app.route("/signup", methods=["POST"])
@@ -260,6 +261,7 @@ def book_appointment_api():
 
 # ------------------------- DOCTOR DASHBOARD -------------------------
 
+
 @app.route("/doctor/appointments", methods=["GET"])
 def get_doctor_appointments():
     """
@@ -268,7 +270,7 @@ def get_doctor_appointments():
     Returns:
         JSON: List of appointments with patient details.
     """
-    if session.get("role") != "Doctor":
+    if "user_id" not in session or session.get("role") != "Doctor":
         return jsonify({"error": "Unauthorized"}), 403
 
     doctor_id = session.get("user_id")
@@ -451,15 +453,15 @@ def delete_doctor(doctor_id):
 @app.route("/admin/patients/<int:patient_id>", methods=["DELETE", "OPTIONS"])
 def delete_patient(patient_id):
     """
-    Delete a patient and their associated appointments.
+     Delete a patient and their associated appointments.
 
-    Args:
-        patient_id (int): The ID of the patient to be deleted.
+     Args:
+         patient_id (int): The ID of the patient to be deleted.
 
-   Returns:
-        200 - Patient deleted
-        404 - Patient not found
-        500 - Database error
+    Returns:
+         200 - Patient deleted
+         404 - Patient not found
+         500 - Database error
     """
     if request.method == "OPTIONS":
         return (
@@ -520,6 +522,7 @@ def delete_admin(admin_id):
 
 # ------------------------- ERROR HANDLING -------------------------
 
+
 @app.errorhandler(404)
 def page_not_found(error):
     """Handles 404 errors (resource not found)."""
@@ -530,6 +533,7 @@ def page_not_found(error):
 def internal_server_error(error):
     """Handles 500 errors (internal server error)."""
     return jsonify({"error": "Internal server error"}), 500
+
 
 # ------------------------- RUN FLASK APP -------------------------
 if __name__ == "__main__":
