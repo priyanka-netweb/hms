@@ -179,45 +179,6 @@ def available_times(doctor_name, date):
     except Exception as e:
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
-
-# @app.route("/patient/book_appointment", methods=["POST"])
-# def book_appointment():
-#     if session.get("role") != "Patient":
-#         return jsonify({"error": "Unauthorized"}), 403
-
-#     data = request.get_json()
-
-#     doctor = Doctor.query.filter_by(name=data["doctor"]).first()
-#     if not doctor:
-#         return jsonify({"error": "Doctor not found"}), 404
-
-#     # Check if the time slot is already booked
-#     existing_appointment = Appointment.query.filter_by(
-#         doctor_id=doctor.id, date=data["date"], time_slot=data["time_slot"]
-#     ).first()
-
-#     if existing_appointment:
-#         return (
-#             jsonify(
-#                 {"error": "This time slot is already taken. Please choose another one."}
-#             ),
-#             400,
-#         )
-
-#     # If the slot is free, create the appointment
-#     new_appointment = Appointment(
-#         patient_id=session["user_id"],
-#         doctor_id=doctor.id,
-#         date=data["date"],
-#         time_slot=data["time_slot"],
-#     )
-
-#     db.session.add(new_appointment)
-#     db.session.commit()
-
-#     return jsonify({"message": "Appointment booked successfully!"})
-
-
 @app.route("/book-appointment-api", methods=["POST"])
 def book_appointment_api():
     data = request.get_json()
