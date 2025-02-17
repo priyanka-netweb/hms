@@ -1,24 +1,34 @@
-from flask import Flask, jsonify, request, session
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from config import Config
 from models import db, User, Doctor, Patient, Appointment  # Import models
 from datetime import datetime, timedelta
+from functools import wraps
+from flask_jwt_extended import (
+    JWTManager,
+    create_access_token,
+    jwt_required,
+    get_jwt_identity,
+)
 
 # Initialize Flask app
 app = Flask(__name__)
 app.config.from_object(Config)
-app.config["SECRET_KEY"] = "priyanka"  # This must stay constant for session security
-SESSION_COOKIE_SECURE = True  # Ensures cookies are only sent over HTTPS.
+app.config["JWT_SECRET_KEY"] = (
+    "5hufr8fh4i5hs8gh4iw9427hd"  # Change this key to something secure
+)
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
+
+jwt = JWTManager(app)
 
 # Initialize extensions
 db.init_app(app)
 bcrypt = Bcrypt(app)
 CORS(app, supports_credentials=True)
 
-# ------------------------- AUTHENTICATION & AUTHORIZATION using session-based authentication -------------------------
 
-
+# ------------------------- AUTHENTICATION & AUTHORIZATION using using JWT Tokens -------------------------
 @app.route("/signup", methods=["POST"])
 def signup():
     """
@@ -62,7 +72,7 @@ def signup():
     # Assign user to respective role table
     user_id = new_user.id
     if data["role"] == "Doctor":
-        new_doctor = Doctor(
+        new_role_entry = Doctor(
             id=user_id,
             name=data["name"],
             email=data["email"],
@@ -70,16 +80,23 @@ def signup():
             available_slots=data.get("available_slots", "9:00AM-5:00PM"),
         )
     elif data["role"] == "Patient":
-        new_doctor = Patient(id=user_id, name=data["name"], email=data["email"])
+        new_role_entry = Patient(id=user_id, name=data["name"], email=data["email"])
 
     try:
-        db.session.add(new_doctor)
+        db.session.add(new_role_entry)
         db.session.commit()
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"Error adding {data['role'].lower()}: {str(e)}"}), 500
 
-    return jsonify({"message": "User registered successfully!"}), 201
+    # Generate JWT token after successful signup
+    access_token = create_access_token(identity=new_user.id)
+    return (
+        jsonify(
+            {"message": "User registered successfully!", "access_token": access_token}
+        ),
+        201,
+    )
 
 
 @app.route("/login", methods=["POST"])
@@ -103,22 +120,48 @@ def login():
     user = User.query.filter_by(email=email).first()
 
     if user and user.check_password(password):  # Use check_password method
-        session.update({"user_id": user.id, "role": user.role, "email": user.email})
-        return jsonify({"message": f"Welcome {user.role}", "role": user.role}), 200
+        # Generate JWT token
+        access_token = create_access_token(
+            identity=user.id, expires_delta=timedelta(hours=1)
+        )
+        return (
+            jsonify({"message": f"Welcome {user.role}", "access_token": access_token}),
+            200,
+        )
     return jsonify({"error": "Invalid credentials"}), 401
 
 
 @app.route("/logout", methods=["POST"])
+@jwt_required()
 def logout():
-    """Clears user session and logs out."""
-    session.clear()
+    """Logout is now handled client-side by removing the token."""
     return jsonify({"message": "Logged out successfully"})
+
+
+# ------------------------- GET USER DETAILS -------------------------
+@app.route("/me", methods=["GET"])
+@jwt_required()
+def get_current_user():
+    """Fetches user details from the JWT token."""
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    return (
+        jsonify(
+            {"id": user.id, "name": user.name, "email": user.email, "role": user.role}
+        ),
+        200,
+    )
 
 
 # ------------------------- DASHBOARD -------------------------
 
 
 @app.route("/dashboard", methods=["GET"])
+@jwt_required()
 def dashboard():
     """
     Returns dashboard information based on user role.
@@ -128,13 +171,11 @@ def dashboard():
         403 - Access denied
         200 - User-specific dashboard data
     """
-    if "role" not in session or "user_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
+    current_user_id = get_jwt_identity()  # Get user ID from JWT token
+    user = User.query.get(current_user_id)
 
-    user_id, role = session["user_id"], session["role"]
-
-    if role == "Patient":
-        patient = Patient.query.get(user_id)
+    if user.role == "Patient":
+        patient = Patient.query.get(current_user_id)
         if patient:
             return jsonify(
                 {
@@ -144,8 +185,8 @@ def dashboard():
                 }
             )
 
-    elif role == "Doctor":
-        doctor = Doctor.query.get(user_id)
+    elif user.role == "Doctor":
+        doctor = Doctor.query.get(current_user_id)
         if doctor:
             return jsonify(
                 {
@@ -155,7 +196,7 @@ def dashboard():
                 }
             )
 
-    elif role == "Admin":
+    elif user.role == "Admin":
         return jsonify({"message": "Welcome Admin", "role": "Admin"})
 
     return jsonify({"error": "Access denied"}), 403
@@ -165,17 +206,29 @@ def dashboard():
 
 
 @app.route("/doctors", methods=["GET"])
+@jwt_required()
 def get_doctors():
     """Returns a list of all doctors."""
-    doctors = Doctor.query.all()
-    doctor_list = [{"name": doc.name, "specialty": doc.specialty} for doc in doctors]
-    return jsonify({"doctors": doctor_list})
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+
+    # Allow access to Patients, Doctors, and Admins
+    if user.role in ["Doctor", "Patient", "Admin"]:
+        doctors = Doctor.query.all()
+        doctor_list = [
+            {"id": doc.id, "name": doc.name, "specialty": doc.specialty}
+            for doc in doctors
+        ]
+        return jsonify({"doctors": doctor_list}), 200
+
+    return jsonify({"error": "Unauthorized"}), 403
 
 
 # ------------------------- APPOINTMENT MANAGEMENT -------------------------
 
 
 @app.route("/available-times/<doctor_name>/<date>", methods=["GET"])
+@jwt_required()
 def available_times(doctor_name, date):
     """
     Returns available time slots for a doctor on a specific date.
@@ -189,6 +242,14 @@ def available_times(doctor_name, date):
         404 - Doctor not found
         500 - Internal error
     """
+
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+
+    # Patients, Doctors, and Admins can access this route
+    if user.role not in ["Doctor", "Admin", "Patient"]:
+        return jsonify({"error": "Unauthorized"}), 403
+
     doctor = Doctor.query.filter_by(name=doctor_name).first()
     if not doctor:
         return jsonify({"error": "Doctor not found"}), 404
@@ -208,6 +269,7 @@ def available_times(doctor_name, date):
             app.time_slot
             for app in Appointment.query.filter_by(doctor_id=doctor.id, date=date)
         }
+
         # Remove booked times from available slots
         available_times = [time for time in available_times if time not in booked_times]
 
@@ -218,8 +280,16 @@ def available_times(doctor_name, date):
 
 
 @app.route("/book-appointment-api", methods=["POST"])
+@jwt_required()
 def book_appointment_api():
     """Handles booking of an appointment."""
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+
+    # Allow only Patients and Admins to book appointments
+    if user.role not in ["Patient", "Admin"]:
+        return jsonify({"error": "Unauthorized"}), 403
+
     data = request.get_json()
     patient_id, doctor_name, date, time_slot = (
         data.get("patient_id"),
@@ -241,7 +311,10 @@ def book_appointment_api():
         doctor_id=doctor.id, date=date, time_slot=time_slot
     ).first()
     if existing_appointment:
-        return jsonify({"status": "error", "message": "Time slot already booked"}), 400
+        return (
+            jsonify({"status": "error", "message": "Time slot already booked"}),
+            400,
+        )
 
     # Create a new appointment
     new_appointment = Appointment(
@@ -256,13 +329,17 @@ def book_appointment_api():
         )
     except Exception as e:
         db.session.rollback()
-        return jsonify({"status": "error", "message": f"Database error: {str(e)}"}), 500
+        return (
+            jsonify({"status": "error", "message": f"Database error: {str(e)}"}),
+            500,
+        )
 
 
 # ------------------------- DOCTOR DASHBOARD -------------------------
 
 
 @app.route("/doctor/appointments", methods=["GET"])
+@jwt_required()
 def get_doctor_appointments():
     """
     Fetch all appointments assigned to the logged-in doctor.
@@ -270,11 +347,17 @@ def get_doctor_appointments():
     Returns:
         JSON: List of appointments with patient details.
     """
-    if "user_id" not in session or session.get("role") != "Doctor":
+    current_user_id = get_jwt_identity()  # Get user ID from JWT token
+    user = User.query.get(current_user_id)
+
+    if user.role != "Doctor":
         return jsonify({"error": "Unauthorized"}), 403
 
-    doctor_id = session.get("user_id")
-    appointments = Appointment.query.filter_by(doctor_id=doctor_id).all()
+    doctor = Doctor.query.get(current_user_id)
+    if not doctor:
+        return jsonify({"error": "Doctor not found"}), 404
+
+    appointments = Appointment.query.filter_by(doctor_id=doctor.id).all()
 
     appointment_list = [
         {
@@ -291,10 +374,11 @@ def get_doctor_appointments():
         for app in appointments
     ]
 
-    return jsonify(appointment_list)
+    return jsonify({"appointments": appointment_list}), 200
 
 
 @app.route("/doctor/appointments/<int:appointment_id>", methods=["DELETE"])
+@jwt_required()
 def delete_appointment(appointment_id):
     """
     Allow a doctor to delete an appointment they own.
@@ -303,24 +387,35 @@ def delete_appointment(appointment_id):
         appointment_id (int): The ID of the appointment to be deleted.
 
     Returns:
-        JSON: Success or error message.
+        200 - Appointment deleted
+        403 - Unauthorized
+        404 - Appointment not found
+        500 - Database error
     """
-    if session.get("role") != "Doctor":
+    current_user_id = get_jwt_identity()  # Retrieve user ID from JWT
+    user = User.query.get(current_user_id)
+
+    if user.role != "Doctor":
         return jsonify({"error": "Unauthorized"}), 403
 
     appointment = Appointment.query.get(appointment_id)
     if not appointment:
         return jsonify({"error": "Appointment not found"}), 404
 
-    if appointment.doctor_id != session["user_id"]:
+    if appointment.doctor_id != current_user_id:
         return jsonify({"error": "Unauthorized to delete this appointment"}), 403
 
-    db.session.delete(appointment)
-    db.session.commit()
-    return jsonify({"message": "Appointment deleted successfully"})
+    try:
+        db.session.delete(appointment)
+        db.session.commit()
+        return jsonify({"message": "Appointment deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
 
 
 @app.route("/doctor/appointments/<int:appointment_id>/done", methods=["PUT"])
+@jwt_required()
 def mark_appointment_done(appointment_id):
     """
     Allow a doctor to mark an appointment as 'done'.
@@ -331,25 +426,33 @@ def mark_appointment_done(appointment_id):
     Returns:
         JSON: Success or error message.
     """
-    if session.get("role") != "Doctor":
+    current_user_id = get_jwt_identity()  # Retrieve user ID from JWT
+    user = User.query.get(current_user_id)
+
+    if user.role != "Doctor":
         return jsonify({"error": "Unauthorized"}), 403
 
     appointment = Appointment.query.get(appointment_id)
     if not appointment:
         return jsonify({"error": "Appointment not found"}), 404
 
-    if appointment.doctor_id != session["user_id"]:
-        return jsonify({"error": "Unauthorized to mark this appointment"}), 403
+    if appointment.doctor_id != current_user_id:
+        return jsonify({"error": "Unauthorized to mark this appointment as done"}), 403
 
-    appointment.status = "done"
-    db.session.commit()
-    return jsonify({"message": "Appointment marked as done"})
+    try:
+        appointment.status = "done"
+        db.session.commit()
+        return jsonify({"message": "Appointment marked as done"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
 
 
 # ------------------------- ADMIN DASHBOARD -------------------------
 
 
 @app.route("/admin/doctors", methods=["GET"])
+@jwt_required()
 def list_doctors():
     """
     Fetch all doctors.
@@ -357,24 +460,27 @@ def list_doctors():
     Returns:
         JSON: List of doctors.
     """
-    if session.get("role") != "Admin":
+    current_user_id = get_jwt_identity()  # Retrieve user ID from JWT
+    user = User.query.get(current_user_id)
+
+    if user.role != "Admin":
         return jsonify({"error": "Unauthorized"}), 403
 
     doctors = Doctor.query.all()
-    return jsonify(
-        [
-            {
-                "id": doc.id,
-                "name": doc.name,
-                "email": doc.email,
-                "specialty": doc.specialty,
-            }
-            for doc in doctors
-        ]
-    )
+    doctor_list = [
+        {
+            "id": doc.id,
+            "name": doc.name,
+            "email": doc.email,
+            "specialty": doc.specialty,
+        }
+        for doc in doctors
+    ]
+    return jsonify({"doctors": doctor_list}), 200
 
 
 @app.route("/admin/patients", methods=["GET"])
+@jwt_required()
 def list_patients():
     """
     Fetch all patients.
@@ -382,16 +488,22 @@ def list_patients():
     Returns:
         JSON: List of patients.
     """
-    if session.get("role") != "Admin":
+    current_user_id = get_jwt_identity()  # Retrieve user ID from JWT
+    user = User.query.get(current_user_id)
+
+    if user.role != "Admin":
         return jsonify({"error": "Unauthorized"}), 403
 
     patients = Patient.query.all()
-    return jsonify(
-        [{"id": pat.id, "name": pat.name, "email": pat.email} for pat in patients]
-    )
+    patient_list = [
+        {"id": pat.id, "name": pat.name, "email": pat.email} for pat in patients
+    ]
+
+    return jsonify({"patients": patient_list}), 200
 
 
 @app.route("/admin/admins", methods=["GET"])
+@jwt_required()
 def list_admins():
     """
     Fetch all admins.
@@ -399,16 +511,22 @@ def list_admins():
     Returns:
         JSON: List of admins.
     """
-    if session.get("role") != "Admin":
+    current_user_id = get_jwt_identity()  # Retrieve user ID from JWT
+    user = User.query.get(current_user_id)
+
+    if user.role != "Admin":
         return jsonify({"error": "Unauthorized"}), 403
 
     admins = User.query.filter_by(role="Admin").all()
-    return jsonify(
-        [{"id": admin.id, "name": admin.name, "email": admin.email} for admin in admins]
-    )
+    admin_list = [
+        {"id": admin.id, "name": admin.name, "email": admin.email} for admin in admins
+    ]
+
+    return jsonify({"admins": admin_list}), 200
 
 
 @app.route("/admin/doctors/<int:doctor_id>", methods=["DELETE"])
+@jwt_required()
 def delete_doctor(doctor_id):
     """
     Delete a doctor and their associated appointments.
@@ -421,22 +539,25 @@ def delete_doctor(doctor_id):
         404 - Doctor not found
         500 - Database error
     """
-    if session.get("role") != "Admin":
+    current_user_id = get_jwt_identity()  # Retrieve user ID from JWT
+    user = User.query.get(current_user_id)
+
+    if user.role != "Admin":
         return jsonify({"error": "Unauthorized"}), 403
 
-    doctor = db.session.get(Doctor, doctor_id)
-    user = db.session.get(User, doctor_id)
+    doctor = Doctor.query.get(doctor_id)
+    user_account = User.query.get(doctor_id)
 
-    if not doctor or not user:
+    if not doctor or not user_account:
         return jsonify({"message": "Doctor not found"}), 404
 
     try:
-        # Delete all appointments associated with the doctor
+        # Delete all appointments related to the doctor
         Appointment.query.filter_by(doctor_id=doctor_id).delete()
 
-        # Delete the doctor and user records
+        # Delete doctor profile and associated user account
         db.session.delete(doctor)
-        db.session.delete(user)
+        db.session.delete(user_account)
         db.session.commit()
 
         return (
@@ -445,12 +566,14 @@ def delete_doctor(doctor_id):
             ),
             200,
         )
+
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
 
 
 @app.route("/admin/patients/<int:patient_id>", methods=["DELETE", "OPTIONS"])
+@jwt_required()
 def delete_patient(patient_id):
     """
      Delete a patient and their associated appointments.
@@ -469,13 +592,16 @@ def delete_patient(patient_id):
             200,
         )  # Handle preflight requests
 
-    if session.get("role") != "Admin":
-        return jsonify({"error": "Unauthorized"}), 403
+    current_user_id = get_jwt_identity()  # Retrieve user ID from JWT
+    user = User.query.get(current_user_id)
 
-    patient = db.session.get(Patient, patient_id)
-    user = db.session.get(User, patient_id)
+    if user.role != "Admin":
+        return jsonify({"error": "Unauthorized"}), 40303
 
-    if not patient or not user:
+    patient = Patient.query.get(patient_id)
+    user_account = User.query.get(patient_id)
+
+    if not patient or not user_account:
         return jsonify({"error": "Patient not found"}), 404
 
     try:
@@ -484,16 +610,23 @@ def delete_patient(patient_id):
 
         # Delete patient and user records
         db.session.delete(patient)
-        db.session.delete(user)
+        db.session.delete(user_account)
         db.session.commit()
 
-        return jsonify({"message": "Patient deleted successfully"}), 200
+        return (
+            jsonify(
+                {"message": "Patient and associated appointments deleted successfully"}
+            ),
+            200,
+        )
+
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
 
 
 @app.route("/admin/admins/<int:admin_id>", methods=["DELETE"])
+@jwt_required()
 def delete_admin(admin_id):
     """
     Deletes an admin user.
@@ -506,11 +639,13 @@ def delete_admin(admin_id):
         404 - Admin not found
         500 - Database error
     """
-    admin = User.query.get(admin_id)
+    current_user_id = get_jwt_identity()  # Retrieve user ID from JWT
+    user = User.query.get(current_user_id)
 
-    if not admin or admin.role != "Admin":
-        return jsonify({"error": "Admin not found"}), 404
+    if user.role != "Admin":
+        return jsonify({"error": "Unauthorized"}), 403
 
+    admin = User.query.get(current_user_id)
     try:
         db.session.delete(admin)
         db.session.commit()
