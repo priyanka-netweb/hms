@@ -4,7 +4,6 @@ from flask_bcrypt import Bcrypt
 from config import Config
 from models import db, User, Doctor, Patient, Appointment  # Import models
 from datetime import datetime, timedelta
-from functools import wraps
 import time
 from flask_jwt_extended import (
     JWTManager,
@@ -17,6 +16,11 @@ from flask_jwt_extended import (
 
 # Initialize Flask app
 app = Flask(__name__)
+
+# Enable CORS
+CORS(app, supports_credentials=True)
+
+# Configure app
 app.config.from_object(Config)
 app.config["JWT_SECRET_KEY"] = (
     "5hufr8fh4i5hs8gh4iw9427hd"  # Change this key to something secure
@@ -27,13 +31,10 @@ app.config["JWT_COOKIE_SECURE"] = True  # Ensures cookie is sent only over HTTPS
 app.config["JWT_COOKIE_HTTPONLY"] = True  # Prevents JavaScript access to cookies
 app.config["JWT_COOKIE_SAMESITE"] = "Lax"  # Prevents CSRF attacks
 
-jwt = JWTManager(app)
-
 # Initialize extensions
+jwt = JWTManager(app)
 db.init_app(app)
 bcrypt = Bcrypt(app)
-CORS(app, supports_credentials=True)
-
 
 # ------------------------- AUTHENTICATION & AUTHORIZATION using using JWT Tokens -------------------------
 @app.route("/signup", methods=["POST"])
