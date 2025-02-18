@@ -5,11 +5,14 @@ from config import Config
 from models import db, User, Doctor, Patient, Appointment  # Import models
 from datetime import datetime, timedelta
 from functools import wraps
+import time
 from flask_jwt_extended import (
     JWTManager,
     create_access_token,
     jwt_required,
     get_jwt_identity,
+    get_jwt,
+    set_access_cookies,
 )
 
 # Initialize Flask app
@@ -19,6 +22,10 @@ app.config["JWT_SECRET_KEY"] = (
     "5hufr8fh4i5hs8gh4iw9427hd"  # Change this key to something secure
 )
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
+app.config["JWT_TOKEN_LOCATION"] = ["cookies"]  # Store JWT in cookies
+app.config["JWT_COOKIE_SECURE"] = True  # Ensures cookie is sent only over HTTPS
+app.config["JWT_COOKIE_HTTPONLY"] = True  # Prevents JavaScript access to cookies
+app.config["JWT_COOKIE_SAMESITE"] = "Lax"  # Prevents CSRF attacks
 
 jwt = JWTManager(app)
 
@@ -89,15 +96,16 @@ def signup():
         db.session.rollback()
         return jsonify({"error": f"Error adding {data['role'].lower()}: {str(e)}"}), 500
 
-    # Generate JWT token after successful signup
-    access_token = create_access_token(identity=new_user.id)
-    return (
-        jsonify(
-            {"message": "User registered successfully!", "access_token": access_token}
-        ),
-        201,
+    # Generate JWT token
+    access_token = create_access_token(
+        identity=new_user.id, expires_delta=timedelta(hours=1)
     )
 
+    # Store JWT in an HTTP-only cookie
+    response = jsonify({"message": "Signup successful!", "role": data["role"]})
+    set_access_cookies(response, access_token)
+
+    return response, 201
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -120,22 +128,31 @@ def login():
     user = User.query.filter_by(email=email).first()
 
     if user and user.check_password(password):  # Use check_password method
-        # Generate JWT token
+        # instead of Generating JWT token we will use HTTP-only cookies to store JWTs, to prevent token leaks.
         access_token = create_access_token(
             identity=user.id, expires_delta=timedelta(hours=1)
         )
-        return (
-            jsonify({"message": f"Welcome {user.role}", "access_token": access_token}),
-            200,
-        )
+        response = jsonify({"message": f"Welcome {user.role}"})
+        set_access_cookies(response, access_token)
+        return response, 200
+
     return jsonify({"error": "Invalid credentials"}), 401
 
+
+revoked_tokens = {}
 
 @app.route("/logout", methods=["POST"])
 @jwt_required()
 def logout():
-    """Logout is now handled client-side by removing the token."""
-    return jsonify({"message": "Logged out successfully"})
+    jti = get_jwt()["jti"]
+    revoked_tokens[jti] = time.time() + 3600  # Token is revoked for 1 hour
+    return jsonify({"message": "Logged out successfully"}), 200
+
+
+@jwt.token_in_blocklist_loader
+def check_if_token_is_revoked(jwt_header, jwt_payload):
+    jti = jwt_payload["jti"]
+    return jti in revoked_tokens and revoked_tokens[jti] > time.time()
 
 
 # ------------------------- GET USER DETAILS -------------------------
@@ -173,6 +190,8 @@ def dashboard():
     """
     current_user_id = get_jwt_identity()  # Get user ID from JWT token
     user = User.query.get(current_user_id)
+    if user.role not in ["Doctor", "Patient", "Admin"]:
+        return jsonify({"error": "Invalid role"}), 403
 
     if user.role == "Patient":
         patient = Patient.query.get(current_user_id)
