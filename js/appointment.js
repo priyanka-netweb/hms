@@ -1,12 +1,12 @@
-// Fetch patient details from session
+// Fetch patient details from session (Ensure patient is logged in)
 fetch("http://127.0.0.1:5000/dashboard", {
   method: "GET",
-  credentials: "include",
+  credentials: "include", // Include JWT token via cookies
 })
   .then((response) => response.json())
   .then((data) => {
     if (data.error) {
-      window.location.href = "login.html";
+      window.location.href = "login.html"; // Redirect to login if no valid JWT
     } else {
       const patientName = data.name; // Get patient name
       const patientId = data.patient_id; // Get patient ID
@@ -14,20 +14,23 @@ fetch("http://127.0.0.1:5000/dashboard", {
       // Display welcome message
       document.getElementById("welcomeMessage").textContent =
         "Welcome " + patientName + "!";
-
+      
       // Autofill Patient ID
       document.getElementById("patient_id").value = patientId;
 
       // Ensure only patients can access the page
-      if (!data.role.includes("Patient")) {
+      if (data.role !== "Patient") {
         alert("Access denied. Only Patients can view this page.");
-        window.location.href = "login.html";
+        window.location.href = "login.html"; // Redirect if the role isn't patient
       }
     }
   })
-  .catch((error) => console.error("Error:", error));
+  .catch((error) => {
+    console.error("Error:", error);
+    window.location.href = "login.html"; // In case of any error, redirect to login
+  });
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
+// Booking Appointment
 document
   .getElementById("appointmentForm")
   .addEventListener("submit", function (event) {
@@ -48,6 +51,7 @@ document
     fetch("http://127.0.0.1:5000/book-appointment-api", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include", // Ensure JWT is sent in cookies
       body: JSON.stringify(appointmentData),
     })
       .then((response) => response.json())
@@ -69,10 +73,12 @@ document
       });
   });
 
+// Fetching available doctors for the dropdown
 document.addEventListener("DOMContentLoaded", function () {
   fetchDoctors();
 });
-////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Fetch available doctors
 function fetchDoctors() {
   fetch("http://127.0.0.1:5000/doctors")
     .then((response) => response.json())
@@ -98,7 +104,8 @@ function fetchDoctors() {
         '<option value="">Error loading doctors</option>';
     });
 }
-//////////////////////////////////////////////////////////////////////////////////////////
+
+// Fetch available times based on selected doctor and date
 function fetchAvailableTimes() {
   let doctorName = document.getElementById("doctor").value;
   let date = document.getElementById("date").value;
@@ -115,7 +122,6 @@ function fetchAvailableTimes() {
   let apiUrl = `http://127.0.0.1:5000/available-times/${encodeURIComponent(
     doctorName
   )}/${date}`;
-  // console.log("Fetching:", apiUrl); // Debugging line
 
   fetch(apiUrl)
     .then((response) => {
@@ -125,7 +131,6 @@ function fetchAvailableTimes() {
       return response.json();
     })
     .then((data) => {
-      // console.log("Available Times:", data); // Debugging line
       timeDropdown.innerHTML = ""; // Clear old options
       if (data.available_times.length === 0) {
         timeDropdown.innerHTML = '<option value="">No slots available</option>';
@@ -147,10 +152,11 @@ function fetchAvailableTimes() {
     });
 }
 
+// Logout
 document.getElementById("logoutBtn").addEventListener("click", function () {
   fetch("http://127.0.0.1:5000/logout", {
     method: "POST",
-    credentials: "include",
+    credentials: "include", // Ensure JWT is sent in cookies
   })
     .then((response) => response.json())
     .then((data) => {

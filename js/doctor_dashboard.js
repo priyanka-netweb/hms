@@ -1,17 +1,18 @@
 document.addEventListener("DOMContentLoaded", function () {
+  // Fetch doctor details and ensure valid JWT token in cookies
   fetch("http://127.0.0.1:5000/dashboard", {
     method: "GET",
-    credentials: "include",
+    credentials: "include", // Ensure JWT is sent in cookies
   })
     .then((response) => response.json())
     .then((data) => {
       if (!data || data.error) {
-        window.location.href = "login.html";
+        window.location.href = "login.html"; // Redirect to login if no valid JWT
       } else {
         let role = data.role;
         if (role !== "Doctor") {
           alert("Access denied. Only doctors can view this page.");
-          window.location.href = "login.html";
+          window.location.href = "login.html"; // Redirect if the role isn't doctor
         } else {
           document.getElementById(
             "roleDisplay"
@@ -23,10 +24,11 @@ document.addEventListener("DOMContentLoaded", function () {
     .catch((error) => console.error("Error:", error));
 });
 
+// Fetch and display doctor's appointments
 function viewAppointments() {
   fetch(`http://127.0.0.1:5000/doctor/appointments?timestamp=${Date.now()}`, {
     method: "GET",
-    credentials: "include",
+    credentials: "include", // Ensure JWT is sent in cookies
   })
     .then((response) => response.json())
     .then((appointments) => {
@@ -79,26 +81,28 @@ function viewAppointments() {
     });
 }
 
+// Delete an appointment
 function deleteAppointment(appointmentId) {
   if (confirm("Are you sure you want to delete this appointment?")) {
     fetch(`http://127.0.0.1:5000/doctor/appointments/${appointmentId}`, {
       method: "DELETE",
-      credentials: "include",
+      credentials: "include", // Ensure JWT is sent in cookies
     })
       .then((response) => response.json())
       .then((data) => {
         alert(data.message);
-        viewAppointments();
+        viewAppointments(); // Refresh the list after deleting an appointment
       })
       .catch((error) => console.error("Error deleting appointment:", error));
   }
 }
 
+// Mark appointment as done
 function markAsDone(appointmentId) {
   if (confirm("Are you sure this appointment is done?")) {
     fetch(`http://127.0.0.1:5000/doctor/appointments/${appointmentId}/done`, {
       method: "PUT",
-      credentials: "include",
+      credentials: "include", // Ensure JWT is sent in cookies
     })
       .then((response) => response.json())
       .then((data) => {
@@ -114,14 +118,15 @@ function markAsDone(appointmentId) {
   }
 }
 
+// Logout functionality
 document.getElementById("logoutBtn").addEventListener("click", function () {
   fetch("http://127.0.0.1:5000/logout", {
     method: "POST",
-    credentials: "include",
+    credentials: "include", // Ensure JWT is sent in cookies
   })
     .then((response) => response.json())
     .then((data) => {
       alert(data.message);
-      window.location.href = "login.html";
+      window.location.href = "login.html"; // Redirect to login page after logout
     });
 });
