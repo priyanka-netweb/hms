@@ -14,11 +14,14 @@ document
     })
       .then((response) => response.json())
       .then((data) => {
-        if (data.message) {
-          alert("Login successful! Role: " + data.role);
+        if (data.access_token) {
+          // Store the JWT token in localStorage (or sessionStorage)
+          localStorage.setItem("jwt", data.access_token);
 
-          // Store role in localStorage or sessionStorage for later use
+          // Store the role in localStorage (to decide redirection)
           localStorage.setItem("userRole", data.role);
+
+          alert("Login successful! Role: " + data.role);
 
           // Redirect based on role
           if (data.role === "Admin") {
@@ -28,7 +31,6 @@ document
           } else if (data.role === "Patient") {
             window.location.href = "appointment.html";
           } else {
-            // window.location.href = "dashboard.html"; // Default redirect
             alert("Invalid role.");
           }
         } else {
