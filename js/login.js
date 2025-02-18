@@ -9,19 +9,16 @@ document
     fetch("http://127.0.0.1:5000/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
+      credentials: "include", // Keep cookies for cross-origin requests
       body: JSON.stringify({ email, password }),
     })
       .then((response) => response.json())
       .then((data) => {
-        if (data.access_token) {
-          // Store the JWT token in localStorage (or sessionStorage)
-          localStorage.setItem("jwt", data.access_token);
-
-          // Store the role in localStorage (to decide redirection)
-          localStorage.setItem("userRole", data.role);
-
+        if (data.message) {
           alert("Login successful! Role: " + data.role);
+
+          // Store role in localStorage or sessionStorage for later use
+          localStorage.setItem("userRole", data.role);
 
           // Redirect based on role
           if (data.role === "Admin") {
@@ -39,3 +36,11 @@ document
       })
       .catch((error) => console.error("Error:", error));
   });
+
+// Utility function to read cookies:
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(";").shift();
+  return null;
+}
