@@ -707,10 +707,10 @@ def delete_admin(admin_id):
         return jsonify({"error": "Unauthorized"}), 403
 
     admin = User.query.get(admin_id)
-    
+
     if not admin:
         return jsonify({"error": "Admin not found"}), 404
-    
+
     if admin.id == user.id:
         return jsonify({"error": "You cannot delete yourself!"}), 400
     try:
