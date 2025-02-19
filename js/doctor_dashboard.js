@@ -1,3 +1,15 @@
+// Helper function to get cookie value by name
+function getCookie(name) {
+  const cookies = document.cookie.split("; ");
+  for (const cookie of cookies) {
+    const [cookieName, cookieValue] = cookie.split("=");
+    if (cookieName === name) {
+      return decodeURIComponent(cookieValue);
+    }
+  }
+  return null;
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   // Fetch doctor details and ensure valid JWT token in cookies
   fetch("http://127.0.0.1:5000/dashboard", {
@@ -44,7 +56,7 @@ function viewAppointments() {
       let table = `<table class='table'>
           <thead>
             <tr>
-              <th>Patient</th>
+              <th>Patient Name</th>
               <th>Date</th>
               <th>Time</th>
               <th>Status</th>
@@ -87,25 +99,54 @@ function viewAppointments() {
 // Delete an appointment
 function deleteAppointment(appointmentId) {
   if (confirm("Are you sure you want to delete this appointment?")) {
+    const csrfToken = getCookie("csrf_access_token"); // Get CSRF token
+    if (!csrfToken) {
+      alert("CSRF token is missing. Please log in again.");
+      return;
+    }
+
     fetch(`http://127.0.0.1:5000/doctor/appointments/${appointmentId}`, {
       method: "DELETE",
       credentials: "include", // Ensure JWT is sent in cookies
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-TOKEN": csrfToken, // Send CSRF token
+      },
     })
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) {
+          return response.json().then((data) => {
+            throw new Error(data.error || "Failed to delete appointment");
+          });
+        }
+        return response.json();
+      })
       .then((data) => {
         alert(data.message);
-        viewAppointments(); // Refresh the list after deleting an appointment
+        viewAppointments();
       })
-      .catch((error) => console.error("Error deleting appointment:", error));
+      .catch((error) => {
+        console.error("Error deleting appointment:", error);
+        alert("Error: " + error.message);
+      });
   }
 }
 
 // Mark appointment as done
 function markAsDone(appointmentId) {
   if (confirm("Are you sure this appointment is done?")) {
+    const csrfToken = getCookie("csrf_access_token"); // Get CSRF token
+    if (!csrfToken) {
+      alert("CSRF token is missing. Please log in again.");
+      return;
+    }
     fetch(`http://127.0.0.1:5000/doctor/appointments/${appointmentId}/done`, {
       method: "PUT",
       credentials: "include", // Ensure JWT is sent in cookies
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-TOKEN": csrfToken, // Send CSRF token
+      },
     })
       .then((response) => response.json())
       .then((data) => {
@@ -122,14 +163,33 @@ function markAsDone(appointmentId) {
 }
 
 // Logout functionality
-document.getElementById("logoutBtn").addEventListener("click", function () {
-  fetch("http://127.0.0.1:5000/logout", {
-    method: "POST",
-    credentials: "include", // Ensure JWT is sent in cookies
-  })
-    .then((response) => response.json())
-    .then((data) => {
+document
+  .getElementById("logoutBtn")
+  .addEventListener("click", async function () {
+    try {
+      // Retrieve CSRF token from cookies
+      const csrfToken = getCookie("csrf_access_token");
+
+      const response = await fetch("http://127.0.0.1:5000/logout", {
+        method: "POST",
+        credentials: "include", // Ensure JWT is sent in cookies
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-TOKEN": csrfToken, // Send CSRF token
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Logout failed");
+      }
+
       alert(data.message);
-      window.location.href = "login.html"; // Redirect to login page after logout
-    });
-});
+      window.location.href = "login.html"; // Redirect to login
+    } catch (error) {
+      console.error("Logout error:", error);
+      alert("Session expired or invalid request. Redirecting to login.");
+      window.location.href = "login.html";
+    }
+  });

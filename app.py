@@ -36,6 +36,7 @@ jwt = JWTManager(app)
 db.init_app(app)
 bcrypt = Bcrypt(app)
 
+
 # ------------------------- AUTHENTICATION & AUTHORIZATION using using JWT Tokens -------------------------
 @app.route("/signup", methods=["POST"])
 def signup():
@@ -47,7 +48,7 @@ def signup():
         "name": "John Doe",
         "email": "johndoe@example.com",
         "password": "securepassword",
-        "role": "Doctor/Patient"
+        "role": "Doctor/Patient/Admin"
     }
 
     Returns:
@@ -77,7 +78,18 @@ def signup():
         db.session.rollback()  # Rollback if error occurs
         return jsonify({"error": f"Error adding user: {str(e)}"}), 500
 
-    # Assign user to respective role table
+    # Validate role
+    if data["role"] not in ["Doctor", "Patient", "Admin"]:
+        return (
+            jsonify(
+                {
+                    "error": "Invalid role. Please select 'Doctor', 'Patient', or 'Admin'."
+                }
+            ),
+            400,
+        )
+
+    # For Doctor or Patient, create a corresponding entry in the respective table
     user_id = new_user.id
     if data["role"] == "Doctor":
         new_role_entry = Doctor(
@@ -87,15 +99,20 @@ def signup():
             specialty=data.get("specialty", "General"),
             available_slots=data.get("available_slots", "9:00AM-5:00PM"),
         )
+        try:
+            db.session.add(new_role_entry)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": f"Error adding doctor: {str(e)}"}), 500
     elif data["role"] == "Patient":
         new_role_entry = Patient(id=user_id, name=data["name"], email=data["email"])
-
-    try:
-        db.session.add(new_role_entry)
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": f"Error adding {data['role'].lower()}: {str(e)}"}), 500
+        try:
+            db.session.add(new_role_entry)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": f"Error adding patient: {str(e)}"}), 500
 
     # Generate JWT token
     access_token = create_access_token(
@@ -107,6 +124,7 @@ def signup():
     set_access_cookies(response, access_token)
 
     return response, 201
+
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -134,8 +152,9 @@ def login():
         access_token = create_access_token(
             identity=str(user.id), expires_delta=timedelta(hours=1)
         )
-        response = jsonify({"message": f"Welcome {user.role}", "role": user.role})
-        app.logger.info(f"Response data: {response.get_data(as_text=True)}")# Debug print
+        response = jsonify(
+            {"message": f"Welcome {user.role}!", "role": user.role, "name": user.name}
+        )
         set_access_cookies(response, access_token)
         return response, 200
 
@@ -144,18 +163,30 @@ def login():
 
 revoked_tokens = {}
 
+
 @app.route("/logout", methods=["POST"])
 @jwt_required()
 def logout():
     jti = get_jwt()["jti"]
-    revoked_tokens[jti] = time.time() + 3600  # Token is revoked for 1 hour
-    return jsonify({"message": "Logged out successfully"}), 200
+    revoked_tokens[jti] = time.time() + 3600  # Revoke token for 1 hour
 
+    # Create a response object
+    response = jsonify({"message": "Logged out successfully"})
 
-@jwt.token_in_blocklist_loader
-def check_if_token_is_revoked(jwt_header, jwt_payload):
-    jti = jwt_payload["jti"]
-    return jti in revoked_tokens and revoked_tokens[jti] > time.time()
+    # Expire the cookies immediately
+    response.set_cookie(
+        "access_token_cookie",
+        "",
+        expires=0,
+        httponly=True,
+        samesite="None",
+        secure=True,
+    )
+    response.set_cookie(
+        "csrf_access_token", "", expires=0, httponly=False, samesite="None", secure=True
+    )
+
+    return response, 200
 
 
 # ------------------------- GET USER DETAILS -------------------------
@@ -216,6 +247,8 @@ def dashboard():
                     "message": f"Welcome Dr. {doctor.name}",
                     "doctor_id": doctor.id,
                     "role": "Doctor",
+                    "name": doctor.name,
+                    "specialty": doctor.specialty,
                 }
             )
 
@@ -380,16 +413,20 @@ def get_doctor_appointments():
     if not doctor:
         return jsonify({"error": "Doctor not found"}), 404
 
+    # Fetch all appointments for the doctor
     appointments = Appointment.query.filter_by(doctor_id=doctor.id).all()
 
-    appointment_list = [
+    # Fetch patient details in one go
+    patient_ids = [app.patient_id for app in appointments]
+    patients = {
+        p.id: p.name for p in Patient.query.filter(Patient.id.in_(patient_ids)).all()
+    }
+
+    # Map the appointments to include patient names
+    appointments_data = [
         {
             "id": app.id,
-            "patient_name": (
-                Patient.query.get(app.patient_id).name
-                if Patient.query.get(app.patient_id)
-                else "Unknown"
-            ),
+            "patient_name": patients.get(app.patient_id, "Unknown"),
             "date": app.date,
             "time": app.time_slot,
             "status": app.status,
@@ -397,7 +434,7 @@ def get_doctor_appointments():
         for app in appointments
     ]
 
-    return jsonify({"appointments": appointment_list}), 200
+    return jsonify({"appointments": appointments_data}), 200
 
 
 @app.route("/doctor/appointments/<int:appointment_id>", methods=["DELETE"])
@@ -419,13 +456,13 @@ def delete_appointment(appointment_id):
     user = User.query.get(current_user_id)
 
     if user.role != "Doctor":
-        return jsonify({"error": "Unauthorized"}), 403
+        return jsonify({"error": "Unauthorized role"}), 403
 
     appointment = Appointment.query.get(appointment_id)
     if not appointment:
         return jsonify({"error": "Appointment not found"}), 404
 
-    if appointment.doctor_id != current_user_id:
+    if int(appointment.doctor_id) != int(current_user_id):
         return jsonify({"error": "Unauthorized to delete this appointment"}), 403
 
     try:
@@ -459,7 +496,7 @@ def mark_appointment_done(appointment_id):
     if not appointment:
         return jsonify({"error": "Appointment not found"}), 404
 
-    if appointment.doctor_id != current_user_id:
+    if int(appointment.doctor_id) != int(current_user_id):
         return jsonify({"error": "Unauthorized to mark this appointment as done"}), 403
 
     try:
@@ -619,7 +656,7 @@ def delete_patient(patient_id):
     user = User.query.get(current_user_id)
 
     if user.role != "Admin":
-        return jsonify({"error": "Unauthorized"}), 40303
+        return jsonify({"error": "Unauthorized"}), 403
 
     patient = Patient.query.get(patient_id)
     user_account = User.query.get(patient_id)
@@ -659,16 +696,23 @@ def delete_admin(admin_id):
 
     Returns:
         200 - Admin deleted
+        400 - Cannot delete own account
         404 - Admin not found
         500 - Database error
     """
     current_user_id = get_jwt_identity()  # Retrieve user ID from JWT
     user = User.query.get(current_user_id)
 
-    if user.role != "Admin":
+    if not user or user.role != "Admin":
         return jsonify({"error": "Unauthorized"}), 403
 
-    admin = User.query.get(current_user_id)
+    admin = User.query.get(admin_id)
+    
+    if not admin:
+        return jsonify({"error": "Admin not found"}), 404
+    
+    if admin.id == user.id:
+        return jsonify({"error": "You cannot delete yourself!"}), 400
     try:
         db.session.delete(admin)
         db.session.commit()

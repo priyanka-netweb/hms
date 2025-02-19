@@ -15,6 +15,7 @@ document
       .then((response) => response.json())
       .then((data) => {
         if (data.message) {
+          console.log(data.message);
           alert("Login successful! Role: " + data.role);
 
           // Store role in localStorage or sessionStorage for later use

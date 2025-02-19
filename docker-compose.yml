@@ -1,10 +1,8 @@
-version: "3.8"
-
 services:
   hms_debug:
-    image: priyankanetweb/hms-2:0.0.1.RELEASE
+    build: .
     container_name: hms_debug
-    command: gunicorn --bind 0.0.0.0:5000 app:app
+    command: flask run --host=0.0.0.0 --port=5000 --debug
     ports:
       - "5000:5000"
       - "5678:5678"
@@ -12,6 +10,8 @@ services:
       - FLASK_ENV=development
     depends_on:
       - db
+    volumes:
+      - .:/app # Mount local project files to container
 
   hms_prod:
     image: priyankanetweb/hms-2:0.0.1.RELEASE

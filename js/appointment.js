@@ -1,3 +1,15 @@
+// Helper function to get cookie value by name
+function getCookie(name) {
+  const cookies = document.cookie.split("; ");
+  for (const cookie of cookies) {
+    const [cookieName, cookieValue] = cookie.split("=");
+    if (cookieName === name) {
+      return decodeURIComponent(cookieValue);
+    }
+  }
+  return null;
+}
+
 // Fetch patient details from session (Ensure patient is logged in)
 fetch("http://127.0.0.1:5000/dashboard", {
   method: "GET",
@@ -14,7 +26,7 @@ fetch("http://127.0.0.1:5000/dashboard", {
       // Display welcome message
       document.getElementById("welcomeMessage").textContent =
         "Welcome " + patientName + "!";
-      
+
       // Autofill Patient ID
       document.getElementById("patient_id").value = patientId;
 
@@ -45,13 +57,16 @@ document
       alert("Please fill all fields.");
       return;
     }
-
+    // const csrfToken = getCookie("csrf_access_token");
     let appointmentData = { patient_id: patientId, doctor, date, time };
 
     fetch("http://127.0.0.1:5000/book-appointment-api", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       credentials: "include", // Ensure JWT is sent in cookies
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-TOKEN": getCookie("csrf_access_token"),
+      },
       body: JSON.stringify(appointmentData),
     })
       .then((response) => response.json())
@@ -77,11 +92,27 @@ document
 document.addEventListener("DOMContentLoaded", function () {
   fetchDoctors();
 });
+document.getElementById("date").addEventListener("change", fetchAvailableTimes);
+document
+  .getElementById("doctor")
+  .addEventListener("change", fetchAvailableTimes);
 
 // Fetch available doctors
 function fetchDoctors() {
-  fetch("http://127.0.0.1:5000/doctors")
-    .then((response) => response.json())
+  const csrfToken = getCookie("csrf_access_token");
+  fetch("http://127.0.0.1:5000/doctors", {
+    method: "GET",
+    credentials: "include", // Include JWT token via cookies
+    headers: {
+      "X-CSRF-TOKEN": csrfToken, // Send CSRF token in headers
+    },
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response.json();
+    })
     .then((data) => {
       let doctorDropdown = document.getElementById("doctor");
       doctorDropdown.innerHTML = '<option value="">Select a Doctor</option>'; // Default option
@@ -100,6 +131,7 @@ function fetchDoctors() {
     })
     .catch((error) => {
       console.error("Error fetching doctors:", error);
+      let doctorDropdown = document.getElementById("doctor");
       doctorDropdown.innerHTML =
         '<option value="">Error loading doctors</option>';
     });
@@ -118,12 +150,18 @@ function fetchAvailableTimes() {
     submitBtn.disabled = true;
     return;
   }
-
+  const csrfToken = getCookie("csrf_access_token");
   let apiUrl = `http://127.0.0.1:5000/available-times/${encodeURIComponent(
     doctorName
   )}/${date}`;
 
-  fetch(apiUrl)
+  fetch(apiUrl, {
+    method: "GET",
+    credentials: "include", // Include JWT token via cookies
+    headers: {
+      "X-CSRF-TOKEN": csrfToken, // Send CSRF token in headers
+    },
+  })
     .then((response) => {
       if (!response.ok) {
         throw new Error(`Server error: ${response.status}`);
@@ -153,19 +191,33 @@ function fetchAvailableTimes() {
 }
 
 // Logout
-document.getElementById("logoutBtn").addEventListener("click", function () {
-  fetch("http://127.0.0.1:5000/logout", {
-    method: "POST",
-    credentials: "include", // Ensure JWT is sent in cookies
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      alert(data.message);
-      window.location.href = "login.html";
-    });
-});
-
-document.getElementById("date").addEventListener("change", fetchAvailableTimes);
 document
-  .getElementById("doctor")
-  .addEventListener("change", fetchAvailableTimes);
+  .getElementById("logoutBtn")
+  .addEventListener("click", async function () {
+    try {
+      // Retrieve CSRF token from cookies
+      const csrfToken = getCookie("csrf_access_token");
+
+      const response = await fetch("http://127.0.0.1:5000/logout", {
+        method: "POST",
+        credentials: "include", // Ensure JWT is sent in cookies
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-TOKEN": csrfToken, // Send CSRF token
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Logout failed");
+      }
+
+      alert(data.message);
+      window.location.href = "login.html"; // Redirect to login
+    } catch (error) {
+      console.error("Logout error:", error);
+      alert("Session expired or invalid request. Redirecting to login.");
+      window.location.href = "login.html";
+    }
+  });

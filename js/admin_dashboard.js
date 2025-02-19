@@ -1,3 +1,15 @@
+// Helper function to get cookie value by name
+function getCookie(name) {
+  const cookies = document.cookie.split("; ");
+  for (const cookie of cookies) {
+    const [cookieName, cookieValue] = cookie.split("=");
+    if (cookieName === name) {
+      return decodeURIComponent(cookieValue);
+    }
+  }
+  return null;
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   // Fetch admin details and verify the role using JWT in cookies
   fetch("http://127.0.0.1:5000/dashboard", {
@@ -29,11 +41,11 @@ document.addEventListener("DOMContentLoaded", function () {
 function viewDoctors() {
   fetch("http://127.0.0.1:5000/admin/doctors", {
     method: "GET",
-    credentials: "include", // Ensure JWT is sent in cookies
+    credentials: "include",
   })
     .then((response) => response.json())
-    .then((doctors) => {
-      displayData(doctors, "Doctors", "doctor");
+    .then((data) => {
+      displayData(data.doctors, "Doctors", "doctor"); // Extract the doctors array
     })
     .catch((error) => console.error("Error loading doctors:", error));
 }
@@ -42,11 +54,11 @@ function viewDoctors() {
 function viewPatients() {
   fetch("http://127.0.0.1:5000/admin/patients", {
     method: "GET",
-    credentials: "include", // Ensure JWT is sent in cookies
+    credentials: "include",
   })
     .then((response) => response.json())
-    .then((patients) => {
-      displayData(patients, "Patients", "patient");
+    .then((data) => {
+      displayData(data.patients, "Patients", "patient"); // Extract the patients array
     })
     .catch((error) => console.error("Error loading patients:", error));
 }
@@ -55,11 +67,11 @@ function viewPatients() {
 function viewAdmins() {
   fetch("http://127.0.0.1:5000/admin/admins", {
     method: "GET",
-    credentials: "include", // Ensure JWT is sent in cookies
+    credentials: "include",
   })
     .then((response) => response.json())
-    .then((admins) => {
-      displayData(admins, "Admins", "admin");
+    .then((data) => {
+      displayData(data.admins, "Admins", "admin"); // Extract the admins array
     })
     .catch((error) => console.error("Error loading admins:", error));
 }
@@ -100,6 +112,7 @@ function deleteItem(type, itemId) {
       credentials: "include", // Include JWT in cookies
       headers: {
         "Content-Type": "application/json",
+        "X-CSRF-TOKEN": getCookie("csrf_access_token"), // Send CSRF token in headers
       },
     })
       .then((response) => {
@@ -122,14 +135,33 @@ function deleteItem(type, itemId) {
 }
 
 // Logout functionality
-document.getElementById("logoutBtn").addEventListener("click", function () {
-  fetch("http://127.0.0.1:5000/logout", {
-    method: "POST",
-    credentials: "include", // Ensure JWT is sent in cookies
-  })
-    .then((response) => response.json())
-    .then((data) => {
+document
+  .getElementById("logoutBtn")
+  .addEventListener("click", async function () {
+    try {
+      // Retrieve CSRF token from cookies
+      const csrfToken = getCookie("csrf_access_token");
+
+      const response = await fetch("http://127.0.0.1:5000/logout", {
+        method: "POST",
+        credentials: "include", // Ensure JWT is sent in cookies
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-TOKEN": csrfToken, // Send CSRF token
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Logout failed");
+      }
+
       alert(data.message);
-      window.location.href = "login.html"; // Redirect to login page after logout
-    });
-});
+      window.location.href = "login.html"; // Redirect to login
+    } catch (error) {
+      console.error("Logout error:", error);
+      alert("Session expired or invalid request. Redirecting to login.");
+      window.location.href = "login.html";
+    }
+  });
