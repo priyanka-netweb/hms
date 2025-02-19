@@ -99,7 +99,7 @@ def signup():
 
     # Generate JWT token
     access_token = create_access_token(
-        identity=new_user.id, expires_delta=timedelta(hours=1)
+        identity=str(new_user.id), expires_delta=timedelta(hours=1)
     )
 
     # Store JWT in an HTTP-only cookie
@@ -129,11 +129,13 @@ def login():
     user = User.query.filter_by(email=email).first()
 
     if user and user.check_password(password):  # Use check_password method
+
         # instead of Generating JWT token we will use HTTP-only cookies to store JWTs, to prevent token leaks.
         access_token = create_access_token(
-            identity=user.id, expires_delta=timedelta(hours=1)
+            identity=str(user.id), expires_delta=timedelta(hours=1)
         )
-        response = jsonify({"message": f"Welcome {user.role}"})
+        response = jsonify({"message": f"Welcome {user.role}", "role": user.role})
+        app.logger.info(f"Response data: {response.get_data(as_text=True)}")# Debug print
         set_access_cookies(response, access_token)
         return response, 200
 
@@ -202,6 +204,7 @@ def dashboard():
                     "message": f"Welcome {patient.name}",
                     "patient_id": patient.id,
                     "role": "Patient",
+                    "name": patient.name,
                 }
             )
 

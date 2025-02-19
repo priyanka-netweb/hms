@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", function () {
         } else {
           document.getElementById(
             "roleDisplay"
-          ).innerHTML = `Welcome Dr. ${data.name}`;
+          ).innerHTML = `Welcome Dr. ${(data.name).toUpperCase()}`;
           viewAppointments(); // Automatically load appointments
         }
       }
@@ -31,11 +31,12 @@ function viewAppointments() {
     credentials: "include", // Ensure JWT is sent in cookies
   })
     .then((response) => response.json())
-    .then((appointments) => {
+    .then((data) => {
+      const appointments = data.appointments; // Extract the array
       const appointmentsDiv = document.getElementById("appointmentsList");
       appointmentsDiv.innerHTML = "";
 
-      if (appointments.length === 0) {
+      if (!appointments || appointments.length === 0) {
         appointmentsDiv.innerHTML = "<p>No appointments found.</p>";
         return;
       }
@@ -61,12 +62,14 @@ function viewAppointments() {
           <td>
               <button class="btn btn-success btn-sm" onclick="markAsDone(${
                 app.id
-              })" ${
-          app.status === "done" ? "disabled" : ""
-        }>Mark as Done</button>
+              })" ${app.status === "done" ? "disabled" : ""}>
+                Mark as Done
+              </button>
               <button class="btn btn-danger btn-sm" onclick="deleteAppointment(${
                 app.id
-              })">Delete</button>
+              })">
+                Delete
+              </button>
           </td>
       </tr>`;
       });
