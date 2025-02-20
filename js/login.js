@@ -37,11 +37,3 @@ document
       })
       .catch((error) => console.error("Error:", error));
   });
-
-// Utility function to read cookies:
-function getCookie(name) {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop().split(";").shift();
-  return null;
-}

@@ -114,15 +114,7 @@ def signup():
             db.session.rollback()
             return jsonify({"error": f"Error adding patient: {str(e)}"}), 500
 
-    # Generate JWT token
-    access_token = create_access_token(
-        identity=str(new_user.id), expires_delta=timedelta(hours=1)
-    )
-
-    # Store JWT in an HTTP-only cookie
     response = jsonify({"message": "Signup successful!", "role": data["role"]})
-    set_access_cookies(response, access_token)
-
     return response, 201
 
 
